@@ -38,7 +38,7 @@ memory.limit(30000000)     # This is needed on some PCs to increase memory allow
 #* Install packgs ----
 
 packgs <- c("gamair", "oro.nifti", "memisc", "devtools", "remotes", "readr", 
-            "imager", "itsadug", "fields", "BPST", "Triangulation", "ImageSCC", 
+            "imager", "itsadug", "fields", "BPST", "triangulation", "ImageSCC", 
             "tidyr", "dplyr", "stringr", "threadr", "memisc", "ggplot2")
 
 for(packgs in packgs) {
