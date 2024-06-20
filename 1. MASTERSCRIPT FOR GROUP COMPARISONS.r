@@ -8,10 +8,15 @@
 ##
 ##                    Basically search for differences between Control and Alzheimer 
 ##                    patients with SCCs and SPM. The true regions are previously known.
-##                    So we compare SCCs and SPM against or true known regions and compute 
-##                    metrics if accuracy.
+##                    So we compare SCCs and SPM against our true known regions and compute 
+##                    metrics of accuracy.
 ##
-## Date Created: 2024-06-19
+## Notes: There are several time-consuming tasks which can be skipped by using the
+##        load() function which appears commented at the end of the code chunk. Read
+##        the code before running and you might save some time.
+##
+## Date Created: 2022-04-19
+## Last Update: 2024-06-20
 ##
 ## Author: Juan A. Arias (M.Sc.)
 ## Email: juanantonio.arias.lopez@usc.es
@@ -92,7 +97,7 @@ y <- rep(1:y, length.out = xy)
 z <- cbind(as.matrix(x), as.matrix(y))
 dat <- as.data.frame(cbind(z, t(template)))
 dat[is.na(dat)] <- 0
-rownames(dat) <- NULL; rm(x, y, dat)
+rownames(dat) <- NULL; rm(x, y)
 
 #* Get neuroContour ----
 # Get contour for the area where values change from 0 to 1 
@@ -111,54 +116,64 @@ ggplot(contour, aes(x, y)) + geom_path()
 # But first we need to do some in-between-steps so that the data is in the correct 
 # format for Functional Data Analysis (SCC is a FDA technique).
 
-#* Load data and Create DB ----
-setwd("~/GitHub/SCCneuroimage/PETimg_masked for simulations")
+#* Load CN data and Create DB ----
+setwd("~/Documents/GitHub/PhD-2023-Neuroimage-article-SCC-vs-SPM/PETimg_masked for simulations")
 
-number <- paste0("C", 1:25)
-name <- paste0("masked_swww", number, "_tripleNormEsp_w00_rrec_OSEM3D_32_it1")
-# Only 25 files are controls and they follow the above defined structure
+# All the control files follow this name pattern (w00) and only a numeric value changes
+pattern <- "^masked_swwwC\\d+_tripleNormEsp_w00_rrec_OSEM3D_32_it1.nii"
 
-database_CN <- data.frame(CN_number = integer(),z = integer(), x = integer(), y = integer(), pet = integer())
+# Get the list of files with that name pattern
+files <- list.files(pattern = pattern, full.names = FALSE)
 
-for (i in 1:length(name)) {
-  
-  temporal <- f.clean(name[i])
-  CN_number <- rep(number[i], length.out = nrow(Z))
-  temporal <- cbind(CN_number,temporal)
-  database_CN <- rbind(database_CN,temporal)
+# Create the database for CN files
+database_CN <- data.frame(CN_number = integer(), z = integer(), x = integer(), y = integer(), pet = integer())
+
+# Loop to process each file
+for(i in 1:length(files)) {
+  # Use neuroSCC::neuroCleaner to process the file
+  temporal <- neuroSCC::neuroCleaner(files[i])
+  # Extract the number from the file name using a regular expression
+  CN_number <- sub("masked_swwwC(\\d+)_.*", "\\1", basename(files[i]))
+  # Print the current control number being processed
+  print(paste("Processing Control Nº", CN_number))
+  # Create a column with the extracted number
+  CN_number <- rep(CN_number, length.out = nrow(temporal))
+  # Add the column to the temporary dataframe
+  temporal <- cbind(CN_number, temporal)
+  # Append the processed data to the main dataframe
+  database_CN <- rbind(database_CN, temporal)
 }
-
-nrow(database_CN[database_CN$pet < 0, ]) # No negative values
-rm(temporal); rm(CN_number)
-
 
 #* Create SCC Matrix ----
 
 # Working on a functional data setup requires for the data to be in a concrete format which
 # usually implies a long line of data points so that each row represents a function
 
-SCC_CN <- matrix(nrow = length(name), ncol = nrow(Z))
+# Preallocate the matrix
+SCC_CN <- matrix(nrow = length(files), ncol = xy)
 
-for (i in 1:length(number)) {
+# Loop through the files
+for(i in seq_along(files)) {
   
-  Y <- subset(database_CN, database_CN$CN_number == number[i] & database_CN$z == param.z) 
-  Y <- Y[1:9919, 5] 
-  Y <- as.matrix(Y)
-  Y = t(Y) 
+  # Get the CN_number corresponding to the current file
+  CN_number <- sub("masked_swwwC(\\d+)_.*", "\\1", basename(files[i]))
+  print(paste("Converting Control Nº", CN_number))
+  # Subset the dataframe according to parameters
+  subset_data <- database_CN[database_CN$CN_number == CN_number & database_CN$z == param.z, ]
+  Y <- subset_data[1:xy, "pet"]
+  # Convert to matrix and transpose
+  Y <- t(as.matrix(Y))
+  # Replace NaN values with 0
   Y[is.nan(Y)] <- 0
+  # Assign the values to the matrix
   SCC_CN[i, ] <- Y
   
 }
 
-# Sometimes R really doesn't want to remove NA so this might be necessary:
+# Now it should be in matrix format with every row representing a Control file 
+# setwd(paste0("~/Documents/GitHub/PhD-2023-Neuroimage-article-SCC-vs-SPM/Results/z", as.character(param.z)))
+# save(SCC_CN, file = "SCC_CN.RData") # SCC matrix for Controls
 
-# na.zero <- function(x) {
-#     x[is.na(x)] <- 0
-# }
-# SCC_CN <-  apply(SCC_CN, 2, na.zero)
-
-
-setwd(paste0("~/GitHub/SCCneuroimage/z", as.character(param.z)))
-save(SCC_CN, file = "SCC_CN.RData") # SCC matrix for Controls
-
+# Load results to save time:
+# load("~/Documents/GitHub/PhD-2023-Neuroimage-article-SCC-vs-SPM/Results/z35/SCC_CN.RData")
 
