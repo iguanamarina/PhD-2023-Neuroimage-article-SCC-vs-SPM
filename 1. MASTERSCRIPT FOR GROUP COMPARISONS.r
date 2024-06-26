@@ -116,59 +116,22 @@ ggplot(contour, aes(x, y)) + geom_path()
 # But first we need to do some in-between-steps so that the data is in the correct 
 # format for Functional Data Analysis (SCC is a FDA technique).
 
-#* Load CN data and Create DB ----
+#* Create CN DataBase ----
+
+# Set the working directory for image files
 setwd("~/Documents/GitHub/PhD-2023-Neuroimage-article-SCC-vs-SPM/PETimg_masked for simulations")
 
-# All the control files follow this name pattern (w00) and only a numeric value changes
+# Create the database using a specific file pattern 
 pattern <- "^masked_swwwC\\d+_tripleNormEsp_w00_rrec_OSEM3D_32_it1.nii"
 
-# Get the list of files with that name pattern
-files <- list.files(pattern = pattern, full.names = FALSE)
+# Use pattern as parameter for neuroSCC::databaseCreator
+database_CN <- neuroSCC::databaseCreator(pattern)
 
-# Create the database for CN files
-database_CN <- data.frame(CN_number = integer(), z = integer(), x = integer(), y = integer(), pet = integer())
 
-# Loop to process each file
-for(i in 1:length(files)) {
-  # Use neuroSCC::neuroCleaner to process the file
-  temporal <- neuroSCC::neuroCleaner(files[i])
-  # Extract the number from the file name using a regular expression
-  CN_number <- sub("masked_swwwC(\\d+)_.*", "\\1", basename(files[i]))
-  # Print the current control number being processed
-  print(paste("Processing Control Nº", CN_number))
-  # Create a column with the extracted number
-  CN_number <- rep(CN_number, length.out = nrow(temporal))
-  # Add the column to the temporary dataframe
-  temporal <- cbind(CN_number, temporal)
-  # Append the processed data to the main dataframe
-  database_CN <- rbind(database_CN, temporal)
-}
+#* Create CN Matrix ----
 
-#* Create SCC Matrix ----
-
-# Working on a functional data setup requires for the data to be in a concrete format which
-# usually implies a long line of data points so that each row represents a function
-
-# Preallocate the matrix
-SCC_CN <- matrix(nrow = length(files), ncol = xy)
-
-# Loop through the files
-for(i in seq_along(files)) {
-  
-  # Get the CN_number corresponding to the current file
-  CN_number <- sub("masked_swwwC(\\d+)_.*", "\\1", basename(files[i]))
-  print(paste("Converting Control Nº", CN_number))
-  # Subset the dataframe according to parameters
-  subset_data <- database_CN[database_CN$CN_number == CN_number & database_CN$z == param.z, ]
-  Y <- subset_data[1:xy, "pet"]
-  # Convert to matrix and transpose
-  Y <- t(as.matrix(Y))
-  # Replace NaN values with 0
-  Y[is.nan(Y)] <- 0
-  # Assign the values to the matrix
-  SCC_CN[i, ] <- Y
-  
-}
+# Assuming that 'database' is for Controls and that 'pattern', 'param.z', and 'xy' are defined in the script
+SCC_CN <- neuroSCC::matrixCreator(database_CN, pattern, param.z, xy)
 
 # Now it should be in matrix format with every row representing a Control file 
 # setwd(paste0("~/Documents/GitHub/PhD-2023-Neuroimage-article-SCC-vs-SPM/Results/z", as.character(param.z)))
