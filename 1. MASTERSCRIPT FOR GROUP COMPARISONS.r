@@ -35,7 +35,7 @@ setwd("~/Documents/GitHub/PhD-2023-Neuroimage-article-SCC-vs-SPM")
 options(scipen = 6, digits = 4) # View outputs in non-scientific notation
 memory.limit(30000000)     # This is needed on some PCs to increase memory allowance
 
-#* Install packgs ----
+#* Install CRAN packgs ----
 
 packgs <- c("gamair", "oro.nifti", "memisc", "devtools", "remotes", "readr", 
             "imager", "itsadug", "fields", "BPST", "triangulation", "ImageSCC", 
@@ -54,7 +54,20 @@ remotes::install_github("skgrange/threadr")
 # Then load them:
 lapply(packgs, library, character.only = TRUE); library(threadr)
 
-#* Package neuroSCC ----
+# Set environment to not stop installations due to warning messages
+Sys.setenv("R_REMOTES_NO_ERRORS_FROM_WARNINGS" = TRUE)
+
+#* Install GitHub packages ----
+packagesGithub <- c("funstatpackages/BPST", "funstatpackages/Triangulation", "funstatpackages/ImageSCC")
+
+# Install and load GitHub packages
+for (pkg in packagesGithub) {
+  remotes::install_github(pkg)
+}
+
+library(BPST); library(Triangulation); library(ImageSCC)
+
+#* Install package neuroSCC ----
 remotes::install_github("iguanamarina/neuroSCC")
 library(neuroSCC)
 
@@ -100,12 +113,42 @@ dat[is.na(dat)] <- 0
 rownames(dat) <- NULL; rm(x, y)
 
 #* Get neuroContour ----
-# Get contour for the area where values change from 0 to 1 
-library(contoureR); library(ggplot2)
-contour = contoureR::getContourLines(dat, levels = c(0)) 
 
-# Visually test that we got the contours
-ggplot(contour, aes(x, y)) + geom_path() 
+# Get contour for the area where values change from 0 to 1 using neuroSCC::neuroContour()
+contourCoordinates <- neuroSCC::neuroContour(dat, levels = c(0))
+
+# Test the results
+plot(contourCoordinates[[1]])       # External boundaries
+if (length(contourCoordinates) > 1) {
+  for (j in 2:length(contourCoordinates)) {
+    points(contourCoordinates[[j]]) # Holes or internal contours if present
+  }
+}
+
+#* Get coordinates in pckg Triangulation format: ----
+
+VT = Triangulation::TriMesh(contourCoordinates[[1]], n = 8) 
+
+# n = Triangulation degree of fineness (8 is recommended)
+# However, higher values can be used as Arias-López et al. (2021) suggests 
+# computing times for higher n values are still sensible.
+
+#* Save these contour coordinates ----
+# Define the directory path
+directoryPath <- paste0("~/Documents/GitHub/PhD-2023-Neuroimage-article-SCC-vs-SPM/Results/z", 
+                        as.character(param.z))
+
+# Check if the directory exists and create it if it does not
+if (!dir.exists(directoryPath)) {
+  message("This folder does not exist and will be created: ", directoryPath)
+  dir.create(directoryPath, recursive = TRUE)
+} else {
+  message("This folder already exists: ", directoryPath)
+}
+
+# Set the working directory and save
+setwd(directoryPath)
+save(VT, file = paste0("contour", as.character(param.z), ".RData"))
 
 
 ####
@@ -140,3 +183,25 @@ SCC_CN <- neuroSCC::matrixCreator(database_CN, pattern, param.z, xy)
 # Load results to save time:
 # load("~/Documents/GitHub/PhD-2023-Neuroimage-article-SCC-vs-SPM/Results/z35/SCC_CN.RData")
 
+
+####
+# 4) CREATE SCC MATRIXES FOR PATHOLOGICAL GROUP ------
+####
+
+
+
+
+
+
+
+# In order to be consistent we use common names Brain.V and Brain.Tr. 
+# From here onwards most of the names follow the ones provided by Wang et al (2019)
+
+Brain.V <- VT[[1]]
+Brain.Tr <- VT[[2]]
+
+V.est = as.matrix(Brain.V)
+# Brain.v <- cbind(Brain.V[,2],Brain.V[,1]) # In case you need to transpose the data
+Tr.est = as.matrix(Brain.Tr)
+V.band = as.matrix(Brain.V)
+Tr.band = as.matrix(Brain.Tr) 
