@@ -188,20 +188,158 @@ SCC_CN <- neuroSCC::matrixCreator(database_CN, pattern, param.z, xy)
 # 4) CREATE SCC MATRIXES FOR PATHOLOGICAL GROUP ------
 ####
 
+# Set initial working directory
+base_dir <- "~/Documents/GitHub/PhD-2023-Neuroimage-article-SCC-vs-SPM/PETimg_masked for simulations"
+setwd(base_dir)
+
+# Get the list of files matching the general pattern and extract maximum value
+files <- list.files(pattern = "^masked_swwwC\\d+_tripleNormEsp_.*\\.nii$", full.names = TRUE)
+max_number <- max(as.integer(sub("masked_swwwC(\\d+)_.*", "\\1", basename(files))), na.rm = TRUE)
+
+#* Define parameters ----
+
+# First the number of original patient
+number <- paste0("C", 1:max_number)
+# The selected region
+region <- c("roiAD", "w32", "w79", "w214", "w271", "w413")
+# And then the ROI
+roi <- c(1, 2, 4, 6, 8)
+
+#* Create AD DataBase and Matrix ----
+
+for (i in 1:length(region)) {
+  
+  for (j in 1:length(roi)) {
+    
+    setwd(base_dir)
+    
+    # Tuning parameters
+    REGION = region[i]
+    ROI = roi[j]
+    pattern <- paste0("^masked_swwwC\\d+_tripleNormEsp_", REGION, "_0_", ROI, "_rrec_OSEM3D_32_it1\\.nii")
+    
+    # Create the database for pathological data
+    database_AD <- neuroSCC::databaseCreator(pattern, control = FALSE)
+    
+    # Create SCC Matrix
+    SCC_matrix <- neuroSCC::matrixCreator(database_AD, pattern, param.z, xy)
+    
+    # Define result directory
+    result_dir <- paste0(dirname(base_dir), "/Results/z", as.character(param.z))
+    if (!dir.exists(result_dir)) {
+      dir.create(result_dir, recursive = TRUE)
+    }
+    
+    setwd(result_dir)
+    
+    file_path <- paste0("SCC_", REGION, "_", ROI, ".RData")
+    
+    # Option 1: Check if the file exists before saving
+    if (!file.exists(file_path)) {
+      save(SCC_matrix, file = file_path)
+      message("File saved: ", file_path)
+    } else {
+      message("File already exists: ", file_path)
+    }
+    
+    # Option 2: Always overwrite the file (commented out)
+    # save(SCC_matrix, file = file_path)
+    # message("File saved (overwritten): ", file_path)
+  }
+}
+
+# In case we wanted to check one of these matrices you can custom use this code.
+# Otherwise, there is no need to check them now as they will be called from 
+# a loop later on:
+
+# # Set REGION and ROI variables you want to check
+# REGION <- "w32" # Options: "roiAD", "w32", "w79", "w214", "w271", "w413"
+# ROI <- 1        # Options: 1, 2, 4, 6, 8
+# 
+# # Define the result directory
+# result_dir <- paste0(dirname(base_dir), "/Results/z", as.character(param.z))
+# 
+# # Define the file path based on REGION and ROI
+# file_path <- paste0(result_dir, "/SCC_", REGION, "_", ROI, ".RData")
+# 
+# # Load the SCC matrix as SCC_matrix
+# load(file_path)
 
 
+####
+# 5) TRIANGULATION AND OTHER PARAMETERS ------
+####
 
+# Based on the results from section "2 - Get coordinates in pckg Triangulation format"
+setwd(paste0("~/Documents/GitHub/PhD-2023-Neuroimage-article-SCC-vs-SPM/Results/z", as.character(param.z)))
 
+# Load previously calculated contour as VT 
+load(paste0("contour", as.character(param.z), ".RData"))
 
-
-# In order to be consistent we use common names Brain.V and Brain.Tr. 
+# In order to be consistent with other packages and to avoid nomenclature problems
+# we use common names Brain.V and Brain.Tr. 
 # From here onwards most of the names follow the ones provided by Wang et al (2019)
 
 Brain.V <- VT[[1]]
 Brain.Tr <- VT[[2]]
 
 V.est = as.matrix(Brain.V)
-# Brain.v <- cbind(Brain.V[,2],Brain.V[,1]) # In case you need to transpose the data
 Tr.est = as.matrix(Brain.Tr)
 V.band = as.matrix(Brain.V)
 Tr.band = as.matrix(Brain.Tr) 
+
+
+####
+# 6) SCC ESTIMATIONS ------
+####
+
+# Set initial working directory
+base_dir <- "~/Documents/GitHub/PhD-2023-Neuroimage-article-SCC-vs-SPM"
+param_z_dir <- paste0(base_dir, "/Results/z", as.character(param.z))
+result_dir <- paste0(param_z_dir, "/results")
+
+# Define regions and ROIs
+region <- c("roiAD", "w32", "w79", "w214", "w271", "w413")
+roi <- c(1, 2, 4, 6, 8)
+
+#* 'The Loop': Fasten your seat belts ----
+for (i in 1:length(region)) {
+  for (j in 1:length(roi)) {
+    setwd(param_z_dir)
+    
+    # Define file names for CN and AD SCC data
+    name_CN <- paste0(param_z_dir, "/SCC_CN.RData")
+    name_AD <- paste0(param_z_dir, "/SCC_", region[i], "_", roi[j], ".RData")
+    
+    # Load SCC data
+    SCC_CN <- threadr::read_rdata(name_CN)
+    SCC_AD <- threadr::read_rdata(name_AD)
+    
+    #** Mean Average Normalization ----
+    SCC_CN <- neuroSCC::meanNormalization(SCC_CN)
+    SCC_AD <- neuroSCC::meanNormalization(SCC_AD)
+    
+    #** Parameters for SCC computation ----
+    d.est <- 5 # degree of spline for mean function
+    d.band <- 2 # degree of spline for SCC
+    r <- 1 # smoothing parameter
+    lambda <- 10^{seq(-6, 3, 0.5)} # penalty parameters
+    alpha.grid <- c(0.10, 0.05, 0.01) # vector of confidence levels
+    
+    #** Construction of SCCs ----
+    setwd(result_dir)
+    
+    result_file <- paste0("SCC_COMP_", region[i], "_", roi[j], ".RData")
+    
+    if (file.exists(result_file)) {
+      print("Nice! The file already exists.") # Skip computation if file exists
+    } else {
+      SCC_COMP <- scc.image(Ya = SCC_AD, Yb = SCC_CN, Z = Z, d.est = d.est, d.band = d.band, r = r,
+                            V.est.a = V.est, Tr.est.a = Tr.est,
+                            V.band.a = V.band, Tr.band.a = Tr.band,
+                            penalty = TRUE, lambda = lambda, alpha.grid = alpha.grid,
+                            adjust.sigma = TRUE)
+      save(SCC_COMP, file = result_file)
+    }
+  }
+}
