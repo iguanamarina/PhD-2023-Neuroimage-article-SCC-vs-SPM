@@ -332,13 +332,14 @@ for (i in 1:length(region)) {
     result_file <- paste0("SCC_COMP_", region[i], "_", roi[j], ".RData")
     
     if (file.exists(result_file)) {
-      print("Nice! The file already exists.") # Skip computation if file exists
+      print(paste0("Nice! The file ", as.character(result_file), " already exists.")) # Skip computation if file exists
     } else {
-      SCC_COMP <- scc.image(Ya = SCC_AD, Yb = SCC_CN, Z = Z, d.est = d.est, d.band = d.band, r = r,
-                            V.est.a = V.est, Tr.est.a = Tr.est,
-                            V.band.a = V.band, Tr.band.a = Tr.band,
-                            penalty = TRUE, lambda = lambda, alpha.grid = alpha.grid,
-                            adjust.sigma = TRUE)
+      SCC_COMP <- ImageSCC::scc.image(Ya = SCC_AD, Yb = SCC_CN, Z = z, 
+                                      d.est = d.est, d.band = d.band, r = r,
+                                      V.est.a = V.est, Tr.est.a = Tr.est,
+                                      V.band.a = V.band, Tr.band.a = Tr.band,
+                                      penalty = TRUE, lambda = lambda, alpha.grid = alpha.grid,
+                                      adjust.sigma = TRUE)
       save(SCC_COMP, file = result_file)
     }
   }
