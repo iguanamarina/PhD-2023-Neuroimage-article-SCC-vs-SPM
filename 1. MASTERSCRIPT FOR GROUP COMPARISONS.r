@@ -110,7 +110,7 @@ y <- rep(1:y, length.out = xy)
 z <- cbind(as.matrix(x), as.matrix(y))
 dat <- as.data.frame(cbind(z, t(template)))
 dat[is.na(dat)] <- 0
-rownames(dat) <- NULL; rm(x, y)
+rownames(dat) <- NULL
 
 #* Get neuroContour ----
 
@@ -174,14 +174,15 @@ database_CN <- neuroSCC::databaseCreator(pattern)
 #* Create CN Matrix ----
 
 # Assuming that 'database' is for Controls and that 'pattern', 'param.z', and 'xy' are defined in the script
-SCC_CN <- neuroSCC::matrixCreator(database_CN, pattern, param.z, xy)
+
+# SCC_CN <- neuroSCC::matrixCreator(database_CN, pattern, param.z, xy)
 
 # Now it should be in matrix format with every row representing a Control file 
 # setwd(paste0("~/Documents/GitHub/PhD-2023-Neuroimage-article-SCC-vs-SPM/Results/z", as.character(param.z)))
 # save(SCC_CN, file = "SCC_CN.RData") # SCC matrix for Controls
 
 # Load results to save time:
-# load("~/Documents/GitHub/PhD-2023-Neuroimage-article-SCC-vs-SPM/Results/z35/SCC_CN.RData")
+load("~/Documents/GitHub/PhD-2023-Neuroimage-article-SCC-vs-SPM/Results/z35/SCC_CN.RData")
 
 
 ####
@@ -344,3 +345,635 @@ for (i in 1:length(region)) {
     }
   }
 }
+
+
+####
+# 7) SCC EVALUATION ----
+####
+
+# This section requires loading the TRUE points with differences in PET activity to test
+# against them. These are called ROI_something. Basically, we will get the TRUE POINTS 
+# according to the creators of these simulation files at Santiago de Compostela's Hospital
+# and then test them against SCC and SPM and get some metrics on each method's efficiency.
+
+#* Theoretical ROIs ----
+
+# Define the base directory (can be skipped if you ran the whole script)
+base_dir <- "~/Documents/GitHub/PhD-2023-Neuroimage-article-SCC-vs-SPM"
+
+# Define the regions to be processed (same as previous)
+regions <- c("w32", "w79", "w214", "w271", "w413", "wroiAD")
+
+# Define the number of patients (max_number is previously calculated)
+numbers <- 1:max_number  
+
+# Call processROIs function from the neuroSCC package
+neuroSCC::processROIs(base_dir, regions, numbers)
+
+# Load ROI data
+library(tidyverse)
+
+# Define the table ROI directory 
+roi_dir <- "~/Documents/GitHub/PhD-2023-Neuroimage-article-SCC-vs-SPM/roisNormalizadas/tables"
+
+# Load all the ROI tables
+ROI_data <- lapply(seq_along(regions), function(i) {
+  lapply(numbers, function(k) {
+    readRDS(file.path(roi_dir, paste0("ROItable_", regions[i], "_", k, ".RDS")))
+  })
+})
+
+# Filter and combine ROI data by z coordinate and pet value
+T_points <- list() # Initialize an empty list to store T_points
+for (i in seq_along(regions)) {
+  for (j in seq_along(numbers)) {
+    df <- ROI_data[[i]][[j]] %>%
+      dplyr::filter(z == param.z & pet == 1) %>%
+      dplyr::select(y, x) %>%
+      tidyr::unite(newcol, y, x, remove = TRUE)
+    T_points[[paste0(as.character(regions[i]), "_C", as.character(numbers[j]))]] <- df
+  }
+}
+
+# Flatten the list of T_points
+# This is the list of TRUE points where the simulation has been carried out
+T_points <- unlist(T_points, recursive = FALSE)
+
+# Remove unwanted part from the names of the list elements
+names(T_points) <- sub("\\.newcol$", "", names(T_points))
+
+# Clean up
+rm(ROI_data)
+
+
+#* Hypothetical points according to SCCs ---- 
+
+# Hypothetical points and sens/esp for different methods go all together
+# First, you need to perform the analysis with SPM and export results to a 
+# binary file named "binary.nii"
+# Pay attention to the folders so that you understand where things come from.
+
+# Prelocate data.frames:
+
+SCC_vs_SPM_complete <- data.frame(
+  method = integer(),
+  region = integer(),
+  roi = integer(),
+  number = integer(),
+  sens = integer(),
+  esp = integer(),
+  PPV = integer(),
+  NPV = integer()
+)
+
+SCC_vs_SPM <- data.frame(
+  method = integer(),
+  region = integer(),
+  roi = integer(),
+  sensMEAN = integer(),
+  sensSD = integer(),
+  espMEAN = integer(),
+  espSD = integer(),
+  ppvMEAN = integer(),
+  ppvSD = integer(),
+  npvMEAN = integer(),
+  npvSD = integer()
+)
+
+# Load the template and automatically detect the limits of x and y
+setwd("~/Documents/GitHub/PhD-2023-Neuroimage-article-SCC-vs-SPM")
+template <- neuroSCC::neuroCleaner("Auxiliary Files/new_mask")
+
+# Keep the relevant slice
+template <- subset(template, template$z == param.z)
+
+# Get the limits of the file structure
+x <- max(template$x)
+y <- max(template$y)
+xy <- x * y
+
+# Calculate the combinations of coordinates present
+x_coords <- rep(1:x, each = y, length.out = xy)
+y_coords <- rep(1:y, length.out = xy)
+total_coords <- data.frame(y = y_coords, x = x_coords)
+total_coords <- tidyr::unite(total_coords, newcol, c(y, x), remove = TRUE)
+
+# Clean up temporary variables
+rm(x_coords); rm(y_coords)
+
+# Main loop to process SCC and SPM results (fasten your seatbelts)
+for (k in 1:length(roi)) {
+  
+  regions <- c("w32", "w79", "w214", "w271", "w413", "roiAD")
+  
+  H_points <- list()
+  
+  # Set working directory to results folder
+  setwd(paste0("~/Documents/GitHub/PhD-2023-Neuroimage-article-SCC-vs-SPM/Results/z", 
+               as.character(param.z), "/results"))
+  
+  # Load SCC results for each region
+  for (i in 1:length(regions)) {
+    load(paste0("SCC_COMP_", regions[i], "_", roi[k], ".RData"))
+    H_points[[as.character(regions[i])]] <- neuroSCC::getPoints(SCC_COMP)[[1]]
+    H_points[[as.character(regions[i])]] <- tidyr::unite(
+      as.data.frame(H_points[[i]]), newcol, c(row, col), remove = TRUE
+    )
+  }
+  
+  rm(list = ls(pattern = "^SCC_COMP"))
+  
+  # Ensure the correct name for wroiAD region
+  regions <- c("w32", "w79", "w214", "w271", "w413", "wroiAD")
+  names(H_points)[6] <- "wroiAD"
+  
+  # Calculate sensitivity and specificity for SCC
+  for (i in 1:length(regions)) {
+    SCC_sens_esp <- data.frame(region = integer(), group = integer(), 
+                               sens = integer(), esp = integer(), 
+                               ppv = integer(), npv = integer())
+    
+    for (j in 1:length(number)) {
+      inters <- dplyr::inner_join(
+        H_points[[as.character(regions[i])]], 
+        data.frame(newcol = T_points[[paste0(as.character(regions[i]), "_", 
+                                             as.character(number[j]))]]), 
+        by = "newcol"
+      )
+      
+      # Sensitivity = TP / (TP + FN)
+      sensibilitySCC <- nrow(inters) / length(T_points[[paste0(as.character(regions[i]), "_", 
+                                                               as.character(number[j]))]]) * 100
+      
+      true_neg <- dplyr::anti_join(
+        total_coords,
+        data.frame(newcol = T_points[[paste0(as.character(regions[i]), "_", 
+                                             as.character(number[j]))]]),
+        by = "newcol"
+      )
+      hypo_neg <- dplyr::anti_join(total_coords, H_points[[as.character(regions[i])]], by = "newcol")
+      
+      anti_inters <- dplyr::inner_join(true_neg, hypo_neg, by = "newcol")
+      
+      # Specificity = TN / (TN + FP)
+      specificitySCC <- nrow(anti_inters) / nrow(true_neg) * 100
+      
+      # PPV = TP / (TP + FP) -> probability of having the disease after a positive test result
+      FalsePositive <- dplyr::inner_join(
+        H_points[[as.character(regions[i])]], true_neg, by = "newcol"
+      )
+      FalseNegative <- dplyr::inner_join(
+        hypo_neg, data.frame(newcol = T_points[[paste0(as.character(regions[i]), "_", 
+                                                       as.character(number[j]))]]), 
+        by = "newcol"
+      )
+      
+      PPV <- (nrow(inters) / (nrow(inters) + nrow(FalsePositive))) * 100
+      
+      # NPV = TN / (FN + TN) -> probability of not having the disease after a negative test result
+      NPV <- (nrow(anti_inters) / (nrow(anti_inters) + nrow(FalseNegative))) * 100
+      
+      temp <- data.frame(region = regions[i], group = number[j], sens = sensibilitySCC, 
+                         esp = specificitySCC, ppv = PPV, npv = NPV)
+      SCC_sens_esp <- rbind(SCC_sens_esp, temp)
+    }
+    
+    means <- data.frame(region = regions[i], group = "MEAN", sens = mean(SCC_sens_esp$sens, na.rm = TRUE), 
+                        esp = mean(SCC_sens_esp$esp, na.rm = TRUE),
+                        ppv = mean(SCC_sens_esp$ppv, na.rm = TRUE),
+                        npv = mean(SCC_sens_esp$npv, na.rm = TRUE))
+    sds <- data.frame(region = regions[i], group = "SD", sens = sd(SCC_sens_esp$sens, na.rm = TRUE), 
+                      esp = sd(SCC_sens_esp$esp, na.rm = TRUE),
+                      ppv = sd(SCC_sens_esp$ppv, na.rm = TRUE),
+                      npv = sd(SCC_sens_esp$npv, na.rm = TRUE))
+    SCC_sens_esp <- rbind(SCC_sens_esp, means, sds)
+    
+    setwd(paste0("~/Documents/GitHub/PhD-2023-Neuroimage-article-SCC-vs-SPM/Results/z", 
+                 as.character(param.z), "/results", "/ROI", roi[k]))
+    readr::write_csv(SCC_sens_esp, paste0("sens_esp_SCC_", regions[i], "_", roi[k], ".csv"), 
+                     na = "NA", append = FALSE)
+  }
+  
+  setwd(paste0("~/Documents/GitHub/PhD-2023-Neuroimage-article-SCC-vs-SPM/Results/z", 
+               as.character(param.z), "/results", "/ROI", roi[k]))
+  
+  sens_esp_SCC_w32 <- readr::read_csv(paste0("sens_esp_SCC_w32_", roi[k], ".csv"), 
+                                      na = "NA", show_col_types = FALSE)
+  sens_esp_SCC_w79 <- readr::read_csv(paste0("sens_esp_SCC_w79_", roi[k], ".csv"), 
+                                      na = "NA", show_col_types = FALSE)
+  sens_esp_SCC_w214 <- readr::read_csv(paste0("sens_esp_SCC_w214_", roi[k], ".csv"), 
+                                       na = "NA", show_col_types = FALSE)
+  sens_esp_SCC_w271 <- readr::read_csv(paste0("sens_esp_SCC_w271_", roi[k], ".csv"), 
+                                       na = "NA", show_col_types = FALSE)
+  sens_esp_SCC_w413 <- readr::read_csv(paste0("sens_esp_SCC_w413_", roi[k], ".csv"), 
+                                       na = "NA", show_col_types = FALSE)
+  sens_esp_SCC_wroiAD <- readr::read_csv(paste0("sens_esp_SCC_wroiAD_", roi[k], ".csv"), 
+                                         na = "NA", show_col_types = FALSE)
+  
+  # Sensitivity and Specificity for SPM
+  for (i in 1:length(regions)) {
+    setwd(paste0("~/Documents/GitHub/PhD-2023-Neuroimage-article-SCC-vs-SPM/Results/z", 
+                 as.numeric(param.z), "/SPM", "/ROI", i, "_", regions[i], "_0", roi[k]))
+    binary <- neuroSCC::neuroCleaner("binary.nii")
+    H_points_SPM <- binary[binary$z == as.numeric(param.z) & binary$pet == 1, 2:3]
+    H_points_SPM <- tidyr::unite(as.data.frame(H_points_SPM), newcol, c(y, x), remove = TRUE)
+    
+    SPM_sens_esp <- data.frame(region = integer(), group = integer(), sens = integer(), 
+                               esp = integer(), ppv = integer(), npv = integer())
+    
+    for (j in 1:length(number)) {
+      inters <- dplyr::inner_join(
+        H_points_SPM, 
+        data.frame(newcol = T_points[[paste0(as.character(regions[i]), "_", 
+                                             as.character(number[j]))]]), 
+        by = "newcol"
+      )
+      
+      # Sensitivity = TP / (TP + FN)
+      sensibilitySPM <- nrow(inters) / length(T_points[[paste0(as.character(regions[i]), "_", 
+                                                               as.character(number[j]))]]) * 100
+      
+      true_neg <- dplyr::anti_join(
+        total_coords, 
+        data.frame(newcol = T_points[[paste0(as.character(regions[i]), "_", 
+                                             as.character(number[j]))]]), 
+        by = "newcol"
+      )
+      
+      hypo_neg <- dplyr::anti_join(total_coords, H_points_SPM, by = "newcol")
+      
+      anti_inters <- dplyr::inner_join(true_neg, hypo_neg, by = "newcol")
+      
+      # Specificity = TN / (TN + FP)
+      specificitySPM <- nrow(anti_inters) / nrow(true_neg) * 100
+      
+      # PPV = TP/(TP+FP) -> probability of having the disease after a positive test result
+      FalsePositive <- dplyr::inner_join(H_points_SPM, true_neg, by = "newcol")
+      FalseNegative <- dplyr::inner_join(
+        hypo_neg, 
+        data.frame(newcol = T_points[[paste0(as.character(regions[i]), "_", as.character(number[j]))]]), 
+        by = "newcol"
+      )
+      
+      PPV <- (nrow(inters) / (nrow(inters) + nrow(FalsePositive))) * 100
+      
+      # NPV = TN/(FN+TN) -> probability of not having the disease after a negative test result
+      NPV <- (nrow(anti_inters) / (nrow(anti_inters) + nrow(FalseNegative))) * 100
+      
+      temp <- data.frame(region = regions[i], group = number[j], sens = sensibilitySPM, 
+                         esp = specificitySPM, ppv = PPV, npv = NPV)
+      SPM_sens_esp <- rbind(SPM_sens_esp, temp)
+    }
+    
+    means <- data.frame(region = regions[i], group = "MEAN", sens = mean(SPM_sens_esp$sens, na.rm = TRUE), 
+                        esp = mean(SPM_sens_esp$esp, na.rm = TRUE),
+                        ppv = mean(SPM_sens_esp$ppv, na.rm = TRUE),
+                        npv = mean(SPM_sens_esp$npv, na.rm = TRUE))
+    sds <- data.frame(region = regions[i], group = "SD", sens = sd(SPM_sens_esp$sens, na.rm = TRUE), 
+                      esp = sd(SPM_sens_esp$esp, na.rm = TRUE),
+                      ppv = sd(SPM_sens_esp$ppv, na.rm = TRUE),
+                      npv = sd(SPM_sens_esp$npv, na.rm = TRUE))
+    SPM_sens_esp <- rbind(SPM_sens_esp, means, sds)
+    
+    setwd(paste0("~/Documents/GitHub/PhD-2023-Neuroimage-article-SCC-vs-SPM/Results/z", 
+                 as.character(param.z), "/results", "/ROI", roi[k]))
+    
+    readr::write_csv(SPM_sens_esp, paste0("sens_esp_SPM_", regions[i], "_", roi[k], ".csv"), 
+                     na = "NA", append = FALSE)
+  }
+  
+  setwd(paste0("~/Documents/GitHub/PhD-2023-Neuroimage-article-SCC-vs-SPM/Results/z", 
+               as.character(param.z), "/results", "/ROI", roi[k]))
+  
+  sens_esp_SPM_w32 <- readr::read_csv(paste0("sens_esp_SPM_w32_", roi[k], ".csv"), 
+                                      na = "NA", show_col_types = FALSE)
+  sens_esp_SPM_w79 <- readr::read_csv(paste0("sens_esp_SPM_w79_", roi[k], ".csv"), 
+                                      na = "NA", show_col_types = FALSE)
+  sens_esp_SPM_w214 <- readr::read_csv(paste0("sens_esp_SPM_w214_", roi[k], ".csv"), 
+                                       na = "NA", show_col_types = FALSE)
+  sens_esp_SPM_w271 <- readr::read_csv(paste0("sens_esp_SPM_w271_", roi[k], ".csv"), 
+                                       na = "NA", show_col_types = FALSE)
+  sens_esp_SPM_w413 <- readr::read_csv(paste0("sens_esp_SPM_w413_", roi[k], ".csv"), 
+                                       na = "NA", show_col_types = FALSE)
+  sens_esp_SPM_wroiAD <- readr::read_csv(paste0("sens_esp_SPM_wroiAD_", roi[k], ".csv"), 
+                                         na = "NA", show_col_types = FALSE)
+  
+  #* Create Complete Lists: ----
+  listSCC <- ls(pattern = "^sens_esp_SCC")
+  
+  for (i in 1:length(listSCC)) {
+    data <- get(listSCC[[i]])[1:max_number, ]
+    method <- rep("SCC", times = max_number)
+    Roi <- rep(as.character(roi[k]), times = max_number) 
+    tempSCC <- cbind(as.data.frame(method), data[, 1], as.data.frame(Roi), data[, 2:6])  
+    SCC_vs_SPM_complete <- rbind(SCC_vs_SPM_complete, tempSCC)
+  }
+  
+  listSPM <- ls(pattern = "^sens_esp_SPM")
+  
+  for (i in 1:length(listSPM)) {
+    data <- get(listSPM[[i]])[1:max_number, ]
+    method <- rep("SPM", times = max_number)
+    Roi <- rep(as.character(roi[k]), times = max_number)  
+    tempSPM <- cbind(as.data.frame(method), data[, 1], as.data.frame(Roi), data[, 2:6])  
+    SCC_vs_SPM_complete <- rbind(SCC_vs_SPM_complete, tempSPM)
+  }
+  
+  #* Create a Final Reduced List: ----
+  for (i in 1:length(listSCC)) {
+    data <- get(listSCC[[i]])[(max_number + 1):(max_number + 2), ]
+    temp <- data.frame(method = "SCC",
+                       region = as.character(data$region[1]), 
+                       roi = roi[k], 
+                       sensMEAN = data$sens[1], 
+                       sensSD = data$sens[2], 
+                       espMEAN = data$esp[1], 
+                       espSD = data$esp[2],
+                       ppvMEAN = data$ppv[1],
+                       ppvSD = data$ppv[2],
+                       npvMEAN = data$npv[1],
+                       npvSD = data$npv[2])    
+    SCC_vs_SPM <- rbind(SCC_vs_SPM, temp)
+  }
+  
+  for (i in 1:length(listSPM)) {
+    data <- get(listSPM[[i]])[(max_number + 1):(max_number + 2), ]
+    temp <- data.frame(method = "SPM",
+                       region = as.character(data$region[1]), 
+                       roi = roi[k], 
+                       sensMEAN = data$sens[1], 
+                       sensSD = data$sens[2], 
+                       espMEAN = data$esp[1], 
+                       espSD = data$esp[2],
+                       ppvMEAN = data$ppv[1],
+                       ppvSD = data$ppv[2],
+                       npvMEAN = data$npv[1],
+                       npvSD = data$npv[2]) 
+    SCC_vs_SPM <- rbind(SCC_vs_SPM, temp)
+  }
+}
+
+# View(SCC_vs_SPM)
+# View(SCC_vs_SPM_complete)
+
+# setwd(paste0("~/Documents/GitHub/PhD-2023-Neuroimage-article-SCC-vs-SPM/Results/z", as.numeric(param.z), "/results"))
+# saveRDS(SCC_vs_SPM, file = "SCC_vs_SPM.RDS")
+# saveRDS(SCC_vs_SPM_complete, file = "SCC_vs_SPM_complete.RDS")
+
+#* Export as LaTeX table code ----
+
+setwd("~/Documents/GitHub/PhD-2023-Neuroimage-article-SCC-vs-SPM/Article")
+
+library(dplyr)
+
+SCC_vs_SPM <- readRDS(paste0("~/Documents/GitHub/PhD-2023-Neuroimage-article-SCC-vs-SPM/Results/z", 
+                             as.numeric(param.z), "/results/SCC_vs_SPM.RDS"))
+
+SCC_vs_SPM <- SCC_vs_SPM %>% dplyr::arrange(method)
+
+SCC_vs_SPM$region <-   factor(SCC_vs_SPM$region,      
+                              levels = c("w32", "w79", "w214", "w271", "w413", "wroiAD"))
+
+SCC_vs_SPM$roi <- as.numeric(SCC_vs_SPM$roi)
+SCC_vs_SPM$roi <- as.character(as.numeric(SCC_vs_SPM$roi) * 10)
+
+latex <- SCC_vs_SPM %>%
+  mutate(Sensibility = paste(round(sensMEAN, 2), round(sensSD, 2), sep = "*")) %>%
+  mutate(Specificity = paste(round(espMEAN, 2), round(espSD, 2), sep = "*")) %>%
+  mutate(PPV = paste(round(ppvMEAN, 2), round(ppvSD, 2), sep = "*")) %>%
+  mutate(NPV = paste(round(npvMEAN, 2), round(npvSD, 2), sep = "*")) %>%
+  arrange(method, roi, region) %>%
+  dplyr::select(method, roi, region, Sensibility, Specificity, PPV, NPV)
+
+latex
+
+# install.packages("xtable")
+library(xtable)
+print(xtable(latex, type = "latex"), 
+      file = "table.tex",
+      include.rownames = FALSE)
+
+
+####  
+# 8) VISUALIZATIONS----------
+####  
+
+# Load data if not already in environment
+referencia <- readRDS(paste0("~/Documents/GitHub/PhD-2023-Neuroimage-article-SCC-vs-SPM/Results/z", 
+                             as.numeric(param.z), "/results/SCC_vs_SPM.RDS"))
+table <- readRDS(paste0("~/Documents/GitHub/PhD-2023-Neuroimage-article-SCC-vs-SPM/Results/z", 
+                        as.numeric(param.z), "/results/SCC_vs_SPM_complete.RDS"))
+
+# Load necessary packages
+library(tidyverse)
+library(lemon)
+library(ggplot2)
+library(gridExtra)
+# library(envalysis) # This package allows for the publish_theme() but it 
+                     # might not work on your version, that's why we stick to minimal_theme()
+
+# Modify data structure
+table$region <- factor(table$region,
+                       levels = c("w32", "w79", "w214", "w271", "w413", "wroiAD"))
+table$Roi <- as.character(as.numeric(table$Roi) * 10)
+
+# Merge tables
+table2 <- rbind(table[table$method == "SCC", ], table[table$method == "SPM", ])
+
+# Set working directory for saving figures
+setwd(paste0("~/Documents/GitHub/PhD-2023-Neuroimage-article-SCC-vs-SPM/Results/z", 
+             as.numeric(param.z), "/Figures")) 
+
+#* Sensitivity and Specificity for wroiAD ----
+graph1 <- ggplot(data = table2[table2$region == "wroiAD", ], aes(x = Roi, y = sens)) +
+  coord_cartesian(ylim = c(0, 100)) +
+  scale_y_continuous(breaks = scales::pretty_breaks(n = 10)) +
+  geom_boxplot(aes(fill = method)) +
+  xlab("Level of Induced Hypoactivity (%)") +
+  ylab("Sensitivity (%)") +
+  guides(fill = guide_legend(title = "Legend")) +
+  scale_fill_brewer(palette = "Set1")
+
+graph2 <- ggplot(data = table2[table2$region == "wroiAD", ], aes(x = Roi, y = esp)) +
+  geom_boxplot(aes(fill = method, col = method)) +
+  guides(col = FALSE) +
+  coord_cartesian(ylim = c(0, 100)) +
+  scale_y_continuous(breaks = scales::pretty_breaks(n = 10)) +
+  xlab("Level of Induced Hypoactivity (%)") +
+  ylab("Specificity (%)") +
+  guides(fill = guide_legend(title = "Legend")) +
+  scale_color_brewer(palette = "Set1") +
+  scale_fill_brewer(palette = "Set1")
+
+# Arrange graphs side by side
+combined_graph <- grid.arrange(graph1, graph2, ncol = 2)
+
+# Save combined graph as PNG
+ggsave(filename = paste0("sens_esp_wroiAD_", as.numeric(param.z), ".png"), 
+       plot = combined_graph, 
+       width = 24, 
+       height = 18, 
+       units = "cm",
+       dpi = 600)
+
+#* Sensitivity for all regions and ROIs ----
+graph3 <- ggplot(data = table2, aes(x = Roi, y = sens)) +
+  scale_y_continuous(breaks = scales::pretty_breaks(n = 10)) +
+  geom_boxplot(outlier.colour = NULL, aes(fill = method), outlier.size = 1, lwd = 0.25) +
+  xlab("Hypoactivity (%)") +
+  ylab("Sensitivity (%)") +
+  guides(fill = guide_legend(title = "Legend")) +
+  facet_wrap(~region, ncol = 2) +
+  facet_rep_wrap(~region, repeat.tick.labels = TRUE) +
+  coord_capped_cart(bottom = "both", left = "both") +
+  theme(panel.border = element_blank(), axis.line = element_line()) +
+  theme(legend.text = element_text(size = 14)) +
+  scale_fill_brewer(palette = "Set1")
+
+# Arrange graph
+plot3 <- grid.arrange(graph3)
+
+# Save sensitivity graph for all regions and ROIs
+ggsave(filename = paste0("sens_ALL_", as.numeric(param.z), ".png"), 
+       plot = plot3, 
+       width = 28.95, 
+       height = 18.3, 
+       units = "cm",
+       dpi = 600)
+
+graph4 <- ggplot(data = table2, aes(x = Roi, y = esp)) +
+  scale_y_continuous(breaks = scales::pretty_breaks(n = 10)) +
+  geom_boxplot(outlier.colour = NULL, aes(fill = method, col = method), outlier.size = 1, lwd = 0.25) +
+  guides(col = FALSE) +
+  xlab("Hypoactivity (%)") +
+  ylab("Specificity (%)") +
+  coord_cartesian(ylim = c(0, 100)) +
+  guides(fill = guide_legend(title = "Legend")) +
+  facet_wrap(~region, nrow = 3) +
+  scale_fill_brewer(palette = "Set1") +
+  scale_color_brewer(palette = "Set1")
+
+# Arrange graph
+plot4 <- grid.arrange(graph4)
+
+# Save specificity graph for all regions and ROIs
+ggsave(filename = paste0("esp_ALL_", as.numeric(param.z), ".png"), 
+       plot = plot4, 
+       width = 22, 
+       height = 26, 
+       units = "cm",
+       dpi = 600)
+
+# Arrange sensitivity and specificity graphs side by side
+plot_together <- grid.arrange(plot3, plot4, ncol = 2)
+
+# Save combined sensitivity and specificity graph
+ggsave(filename = paste0("sens_esp_ALL_", as.numeric(param.z), ".png"), 
+       plot = plot_together, 
+       width = 22, 
+       height = 26, 
+       units = "cm",
+       dpi = 600)
+
+#* PPV and NPV for wroiAD ----
+graph5 <- ggplot(data = table2, aes(x = Roi, y = ppv)) +
+  scale_y_continuous(breaks = scales::pretty_breaks(n = 10)) +
+  geom_boxplot(aes(fill = method)) +
+  xlab("Hypoactivity (%)") +
+  ylab("Positive Predictive Value (%)") +
+  guides(fill = guide_legend(title = "Legend")) +
+  facet_wrap(~region, ncol = 2) +
+  facet_rep_wrap(~region, repeat.tick.labels = TRUE) +
+  coord_capped_cart(bottom = "both", left = "both") +
+  theme(panel.border = element_blank(), axis.line = element_line()) +
+  scale_fill_brewer(palette = "Set1") +
+  coord_cartesian(ylim = c(0, 100))
+
+graph6 <- ggplot(data = table2, aes(x = Roi, y = npv)) + 
+  scale_y_continuous(breaks = scales::pretty_breaks(n = 10)) +
+  coord_cartesian(ylim = c(0, 100)) +
+  geom_boxplot(aes(fill = method)) + 
+  xlab("Level of Induced Hypoactivity (%)") + 
+  ylab("Negative Predictive Value (%)") + 
+  guides(fill = guide_legend(title = "Legend")) +
+  scale_fill_brewer(palette = "Set1") +
+  scale_color_brewer(palette = "Set1")
+
+# Arrange graph
+plot_ppv <- grid.arrange(graph5)
+plot_npv <- grid.arrange(graph6)
+
+# Save PPV graph for wroiAD
+ggsave(filename = paste0("PPV_wroiAD_", as.numeric(param.z), ".png"), 
+       plot = plot_ppv, 
+       width = 22, 
+       height = 26, 
+       units = "cm",
+       dpi = 600)
+
+# Save NPV graph for wroiAD
+ggsave(filename = paste0("NPV_wroiAD_", as.numeric(param.z), ".png"), 
+       plot = plot_npv, 
+       width = 22, 
+       height = 26, 
+       units = "cm",
+       dpi = 600)
+
+#* PPV and NPV for all regions and ROIs ----
+graph7 <- ggplot(data = table2, aes(x = Roi, y = ppv)) +
+  scale_y_continuous(breaks = scales::pretty_breaks(n = 10)) +
+  geom_boxplot(outlier.colour = NULL, aes(fill = method), outlier.size = 1, lwd = 0.25) +
+  xlab("Hypoactivity (%)") +
+  ylab("Positive Predictive Value (%)") +
+  guides(fill = guide_legend(title = "Legend")) +
+  facet_wrap(~region, ncol = 3) +
+  facet_rep_wrap(~region, repeat.tick.labels = TRUE) +
+  coord_capped_cart(bottom = "both", left = "both") +
+  theme(panel.border = element_blank(), axis.line = element_line()) +
+  theme(legend.text = element_text(size = 14)) +
+  scale_fill_brewer(palette = "Set1")
+
+# Arrange graph
+plot7 <- grid.arrange(graph7)
+
+# Save PPV graph for all regions and ROIs
+ggsave(filename = paste0("ppv_ALL_", as.numeric(param.z), ".png"), 
+       plot = plot7, 
+       width = 28.95, 
+       height = 18.3, 
+       units = "cm",
+       dpi = 600)
+
+graph8 <- ggplot(data = table2, aes(x = Roi, y = npv)) +
+  scale_y_continuous(breaks = scales::pretty_breaks(n = 10)) +
+  geom_boxplot(outlier.colour = NULL, aes(fill = method, col = method), outlier.size = 1, lwd = 0.25) +
+  xlab("Hypoactivity (%)") +
+  ylab("Negative Predictive Value (%)") +
+  coord_cartesian(ylim = c(0, 100)) +
+  guides(fill = guide_legend(title = "Legend")) +
+  guides(col = FALSE) +
+  facet_wrap(~region, nrow = 3) +
+  scale_fill_brewer(palette = "Set1") +
+  scale_color_brewer(palette = "Set1")
+
+# Arrange graphs
+plot8 <- grid.arrange(graph8)
+plot9 <- grid.arrange(plot7, plot8, ncol = 2)
+
+# Save NPV graph for all regions and ROIs
+ggsave(filename = paste0("npv_ALL_", as.numeric(param.z), ".png"), 
+       plot = plot8, 
+       width = 22, 
+       height = 26, 
+       units = "cm",
+       dpi = 600)
+
+# Save combined PPV and NPV graph for all regions and ROIs
+ggsave(filename = paste0("ppv_npv_ALL_", as.numeric(param.z), ".png"), 
+       plot = plot9, 
+       width = 22, 
+       height = 26, 
+       units = "cm",
+       dpi = 600)
+
+
