@@ -402,6 +402,9 @@ T_points <- unlist(T_points, recursive = FALSE)
 # Remove unwanted part from the names of the list elements
 names(T_points) <- sub("\\.newcol$", "", names(T_points))
 
+# setwd("~/Documents/GitHub/PhD-2023-Neuroimage-article-SCC-vs-SPM/roisNormalizadas/tables")
+# saveRDS(T_points, file = "T_points.RDS")
+
 # Clean up
 rm(ROI_data)
 
@@ -977,3 +980,151 @@ ggsave(filename = paste0("ppv_npv_ALL_", as.numeric(param.z), ".png"),
        dpi = 600)
 
 
+####  
+# 9) 1 VS GROUP ----------
+####  
+
+# So far, the results show that SCC outperforms SPM in the Group vs Group
+# comparison. Meaning that for neuroimage research it is a more precise 
+# method for finding differences in brain activity between groups of patients.
+# Usually, between a Control Group and a Pathological Group like in our example.
+
+# However, the most pressing problem in clinical practice is the diagnosis of
+# a single patient as early in the development of the disease as possible. That
+# requires much more accuracy given that relatively small loses of brain activity
+# in small areas of the brain may be critical for the diagnostic process. 
+
+# Being that the case, we now move to a second more ambitious objective of 
+# testing SCC against SPM in a 1 vs Group context. In order to do that we will 
+# take single AD simulated patients and compare them against the Control group.
+# Since we know the exact simulated damage form the ROI files, we can compare
+# 750 simulated single patients against the group of Controls and evaluate
+# performance in this simulated scenario.
+
+
+#* Preamble ----
+
+# Of the things we need, we already have
+
+# The True Points
+# T_points <- readRDS("~/Documents/GitHub/PhD-2023-Neuroimage-article-SCC-vs-SPM/roisNormalizadas/tables/T_points.RDS")
+
+# The SCC_ (matrix of controls)
+load("~/Documents/GitHub/PhD-2023-Neuroimage-article-SCC-vs-SPM/Results/z35/SCC_CN.RData")
+
+# And the triangulations, run the chunk if not loaded
+# So we only need the SCC of just one patient
+
+# Set initial working directory
+base_dir <- "~/Documents/GitHub/PhD-2023-Neuroimage-article-SCC-vs-SPM/PETimg_masked for simulations"
+setwd(base_dir)
+
+# Plant the pattern
+pattern <- paste0("^masked_swwwC1_tripleNormEsp_roiAD_0_8_rrec_OSEM3D_32_it1.nii")
+    
+# Create the database for pathological data
+SCC_AD <- neuroSCC::databaseCreator(pattern, control = FALSE)
+
+# Create SCC Matrix
+SCC_AD <- neuroSCC::matrixCreator(SCC_AD, pattern, param.z, xy)
+
+#** Mean Average Normalization ----
+SCC_CN <- neuroSCC::meanNormalization(SCC_CN)
+SCC_AD <- neuroSCC::meanNormalization(SCC_AD)
+
+# Change wd to export results
+setwd("~/Documents/GitHub/PhD-2023-Neuroimage-article-SCC-vs-SPM/Results/z35/1vsGroup")
+
+#** Parameters for SCC computation ----
+d.est <- 5 # degree of spline for mean function
+d.band <- 2 # degree of spline for SCC
+r <- 1 # smoothing parameter
+lambda <- 10^{seq(-6, 3, 0.5)} # penalty parameters
+alpha.grid <- c(0.10, 0.05, 0.01) # vector of confidence levels
+
+#** Construction of SCCs ----
+
+# result_file <- paste0("SCC_COMP_", region[i], "_", roi[j], ".RData")
+
+SCC_1vsG <- ImageSCC::scc.image(Ya = SCC_AD, Yb = SCC_CN, Z = z, 
+                                  d.est = d.est, d.band = d.band, r = r,
+                                  V.est.a = V.est, Tr.est.a = Tr.est,
+                                  V.band.a = V.band, Tr.band.a = Tr.band,
+                                  penalty = TRUE, lambda = lambda, alpha.grid = alpha.grid,
+                                  adjust.sigma = TRUE)
+  save(SCC_COMP, file = result_file)
+  
+  
+#* Clone Factory ----  
+
+# Set initial working directory
+setwd(base_dir)
+
+# Plant the pattern
+pattern <- paste0("^masked_swwwC1_tripleNormEsp_roiAD_0_8_rrec_OSEM3D_32_it1.nii")
+
+# Create the database for pathological data
+SCC_AD <- neuroSCC::databaseCreator(pattern, control = FALSE)
+
+# Create SCC Matrix
+SCC_AD <- neuroSCC::matrixCreator(SCC_AD, pattern, param.z, xy)
+
+#** Mean Average Normalization ----
+SCC_CN <- neuroSCC::meanNormalization(SCC_CN)
+SCC_AD <- neuroSCC::meanNormalization(SCC_AD)
+
+# Define the number of clones to generate
+num_clones <- 24
+
+# Generar clones con ruido Poisson basado en los valores existentes, excepto en celdas con valor cero
+generate_poisson_clones <- function(original_data, num_clones) {
+  clones <- matrix(NA, nrow = num_clones, ncol = length(original_data))
+  for (i in 1:num_clones) {
+    noise <- ifelse(original_data == 0, 0, rpois(length(original_data), lambda = original_data * 0.1)) # Generar ruido Poisson solo para valores no cero
+    clones[i, ] <- ifelse(original_data == 0, 0, original_data + noise) # Aplicar ruido solo para valores no cero
+  }
+  return(clones)
+}
+
+
+# Create a matrix of clones for SCC_AD
+SCC_AD_clones <- generate_poisson_clones(SCC_AD, num_clones)
+
+# Check the structure of the clones
+print(dim(SCC_AD_clones))
+
+# Combine the original patient data with the clones to form a new matrix
+SCC_AD_expanded <- rbind(SCC_AD, SCC_AD_clones)
+SCC_AD_expanded <- neuroSCC::meanNormalization(SCC_AD_expanded)
+
+# Change working directory to export results
+setwd("~/Documents/GitHub/PhD-2023-Neuroimage-article-SCC-vs-SPM/Results/z35/1vsGroup")
+
+#** Parameters for SCC computation ----
+d.est <- 5  # degree of spline for mean function
+d.band <- 2  # degree of spline for SCC
+r <- 1  # smoothing parameter
+lambda <- 10^{seq(-6, 3, 0.5)}  # penalty parameters
+alpha.grid <- c(0.10, 0.05, 0.01)  # vector of confidence levels
+
+#** Construction of SCCs ----
+result_file <- paste0("SCC_1vsG_", param.z, ".RData")
+
+SCC_1vsG <- ImageSCC::scc.image(
+  Ya = SCC_AD_expanded, 
+  Yb = SCC_CN, 
+  Z = z, 
+  d.est = d.est, 
+  d.band = d.band, 
+  r = r,
+  V.est.a = V.est, 
+  Tr.est.a = Tr.est,
+  V.band.a = V.band, 
+  Tr.band.a = Tr.band,
+  penalty = TRUE, 
+  lambda = lambda, 
+  alpha.grid = alpha.grid,
+  adjust.sigma = TRUE
+)
+
+save(SCC_1vsG, file = result_file)
