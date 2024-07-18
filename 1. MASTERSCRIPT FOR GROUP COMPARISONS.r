@@ -1007,7 +1007,7 @@ ggsave(filename = paste0("ppv_npv_ALL_", as.numeric(param.z), ".png"),
 # Of the things we need, we already have
 
 # The True Points
-# T_points <- readRDS("~/Documents/GitHub/PhD-2023-Neuroimage-article-SCC-vs-SPM/roisNormalizadas/tables/T_points.RDS")
+T_points <- readRDS("~/Documents/GitHub/PhD-2023-Neuroimage-article-SCC-vs-SPM/roisNormalizadas/tables/T_points.RDS")
 
 # The SCC_ (matrix of controls)
 load("~/Documents/GitHub/PhD-2023-Neuroimage-article-SCC-vs-SPM/Results/z35/SCC_CN.RData")
@@ -1019,46 +1019,7 @@ load("~/Documents/GitHub/PhD-2023-Neuroimage-article-SCC-vs-SPM/Results/z35/SCC_
 base_dir <- "~/Documents/GitHub/PhD-2023-Neuroimage-article-SCC-vs-SPM/PETimg_masked for simulations"
 setwd(base_dir)
 
-# Plant the pattern
-pattern <- paste0("^masked_swwwC1_tripleNormEsp_roiAD_0_8_rrec_OSEM3D_32_it1.nii")
-    
-# Create the database for pathological data
-SCC_AD <- neuroSCC::databaseCreator(pattern, control = FALSE)
-
-# Create SCC Matrix
-SCC_AD <- neuroSCC::matrixCreator(SCC_AD, pattern, param.z, xy)
-
-#** Mean Average Normalization ----
-SCC_CN <- neuroSCC::meanNormalization(SCC_CN)
-SCC_AD <- neuroSCC::meanNormalization(SCC_AD)
-
-# Change wd to export results
-setwd("~/Documents/GitHub/PhD-2023-Neuroimage-article-SCC-vs-SPM/Results/z35/1vsGroup")
-
-#** Parameters for SCC computation ----
-d.est <- 5 # degree of spline for mean function
-d.band <- 2 # degree of spline for SCC
-r <- 1 # smoothing parameter
-lambda <- 10^{seq(-6, 3, 0.5)} # penalty parameters
-alpha.grid <- c(0.10, 0.05, 0.01) # vector of confidence levels
-
-#** Construction of SCCs ----
-
-# result_file <- paste0("SCC_COMP_", region[i], "_", roi[j], ".RData")
-
-SCC_1vsG <- ImageSCC::scc.image(Ya = SCC_AD, Yb = SCC_CN, Z = z, 
-                                  d.est = d.est, d.band = d.band, r = r,
-                                  V.est.a = V.est, Tr.est.a = Tr.est,
-                                  V.band.a = V.band, Tr.band.a = Tr.band,
-                                  penalty = TRUE, lambda = lambda, alpha.grid = alpha.grid,
-                                  adjust.sigma = TRUE)
-  save(SCC_COMP, file = result_file)
-  
-  
 #* Clone Factory ----  
-
-# Set initial working directory
-setwd(base_dir)
 
 # Plant the pattern
 pattern <- paste0("^masked_swwwC1_tripleNormEsp_roiAD_0_8_rrec_OSEM3D_32_it1.nii")
@@ -1074,7 +1035,7 @@ SCC_CN <- neuroSCC::meanNormalization(SCC_CN)
 SCC_AD <- neuroSCC::meanNormalization(SCC_AD)
 
 # Define the number of clones to generate
-num_clones <- 24
+num_clones <- 4
 
 # Generar clones con ruido Poisson basado en los valores existentes, excepto en celdas con valor cero
 generate_poisson_clones <- function(original_data, num_clones) {
@@ -1108,7 +1069,7 @@ lambda <- 10^{seq(-6, 3, 0.5)}  # penalty parameters
 alpha.grid <- c(0.10, 0.05, 0.01)  # vector of confidence levels
 
 #** Construction of SCCs ----
-result_file <- paste0("SCC_1vsG_", param.z, ".RData")
+result_file <- paste0("SCC_1vsG_2", param.z, ".RData")
 
 SCC_1vsG <- ImageSCC::scc.image(
   Ya = SCC_AD_expanded, 
@@ -1128,3 +1089,51 @@ SCC_1vsG <- ImageSCC::scc.image(
 )
 
 save(SCC_1vsG, file = result_file)
+
+
+
+#* Preliminary Visualizations ----
+library(fields)
+
+# load("~/Documents/GitHub/PhD-2023-Neuroimage-article-SCC-vs-SPM/Results/z35/1vsGroup/SCC_1vsG_35.RData")
+
+plot(SCC_1vsG,
+  # breaks=c(0,2),
+  # col="turquoise",
+  breaks = seq(from = 0, to = 2, length.out = 65),
+  xlab = "Longitudinal (1-95)",
+  ylab = "Transversal (1-79)",
+  sub = "Difference between estimated mean functions: CNs - ADs",
+  col.sub = "red",
+  family = "serif"
+)
+
+# SECOND WAY: JUST ONE COLOR AND THEN WE OVERLAY A SERIES OF POINTS
+# RUN THIS NEXT PLOT CODE, STOP IN ONE OF THE ESTIMATED MEAN FUNCTIONS, THEN RUN "POINTS" TO OVERLAY THEM
+
+plot(SCC_1vsG,
+  breaks = c(0, 2),
+  col = "turquoise",
+  # breaks=seq(from=0,to=2,length.out = 65),
+  xlab = "Longitudinal (1-95)",
+  ylab = "Transversal (1-79)",
+  sub = "Difference between estimated mean functions: CNs - ADs",
+  col.sub = "red",
+  family = "serif"
+)
+
+points_1 <- getPoints(SCC_1vsG) # Returns coordinates of points above or below estimated mean function (points.P,points.N; in that order)
+
+points(points_1[[1]],
+  type = "p",
+  pch = 15,
+  col = "navy"
+)
+
+points(points_1[[2]],
+  type = "p",
+  pch = 15,
+  col = "yellow"
+)
+
+
