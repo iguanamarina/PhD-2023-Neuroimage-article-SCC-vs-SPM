@@ -1919,4 +1919,88 @@ p2 <- ggplot(data_combined, aes(x = hypo_level, y = specificity, fill = method))
 # Combine panels if needed:
 # library(gridExtra)
 # grid.arrange(p1, p2, ncol = 1)
- 
+
+
+#* Multiplot Boxplots ----
+# Load required libraries
+library(ggplot2)
+library(gridExtra)
+library(dplyr)
+library(grid)
+
+# Common theme for all plots
+plot_theme <- theme_minimal() +
+  theme(
+    panel.grid.minor = element_blank(),
+    panel.grid.major = element_line(color = "lightgray", size = 0.2),
+    panel.spacing = unit(1.5, "lines"),
+    strip.text = element_text(size = 12, face = "bold"),
+    axis.line = element_line(color = "black", size = 0.3),
+    legend.position = "bottom",
+    legend.title = element_text(size = 10),
+    legend.text = element_text(size = 10),
+    axis.title = element_text(size = 12),
+    axis.text = element_text(size = 10),
+    plot.title = element_text(hjust = 0.5, size = 14)
+  )
+
+# Sensitivity Plot
+p1 <- ggplot(data_combined, aes(x = hypo_level, y = sensitivity)) +
+  geom_boxplot(aes(fill = method), outlier.size = 1, width = 0.7) +
+  facet_wrap(~region, ncol = 2) +
+  scale_y_continuous(breaks = seq(0, 100, 20), limits = c(0, 100)) +
+  scale_fill_brewer(palette = "Set1", name = "Method") +
+  labs(title = "Sensitivity by Region and Method",
+       x = "Hypoactivity (%)",
+       y = "Sensitivity (%)") +
+  plot_theme
+
+# Specificity Plot
+p2 <- ggplot(data_combined, aes(x = hypo_level, y = specificity)) +
+  geom_boxplot(aes(fill = method), outlier.size = 1, width = 0.7) +
+  facet_wrap(~region, ncol = 2) +
+  scale_y_continuous(breaks = seq(0, 100, 20), limits = c(0, 100)) +
+  scale_fill_brewer(palette = "Set1", name = "Method") +
+  labs(title = "Specificity by Region and Method",
+       x = "Hypoactivity (%)",
+       y = "Specificity (%)") +
+  plot_theme
+
+# PPV Plot
+p3 <- ggplot(data_combined, aes(x = hypo_level, y = ppv)) +
+  geom_boxplot(aes(fill = method), outlier.size = 1, width = 0.7) +
+  facet_wrap(~region, ncol = 2) +
+  scale_y_continuous(breaks = seq(0, 100, 10), limits = c(0, 40)) +
+  scale_fill_brewer(palette = "Set1", name = "Method") +
+  labs(title = "Positive Predictive Value by Region and Method",
+       x = "Hypoactivity (%)",
+       y = "PPV (%)") +
+  plot_theme
+
+# NPV Plot
+p4 <- ggplot(data_combined, aes(x = hypo_level, y = npv)) +
+  geom_boxplot(aes(fill = method), outlier.size = 1, width = 0.7) +
+  facet_wrap(~region, ncol = 2) +
+  scale_y_continuous(breaks = seq(0, 100, 20), limits = c(0, 100)) +
+  scale_fill_brewer(palette = "Set1", name = "Method") +
+  labs(title = "Negative Predictive Value by Region and Method",
+       x = "Hypoactivity (%)",
+       y = "NPV (%)") +
+  plot_theme
+
+# Save plots
+# Ajusta la ruta según necesites
+ggsave("sensitivity_plot.png", p1, width = 12, height = 8, dpi = 300)
+ggsave("specificity_plot.png", p2, width = 12, height = 8, dpi = 300)
+ggsave("ppv_plot.png", p3, width = 12, height = 8, dpi = 300)
+ggsave("npv_plot.png", p4, width = 12, height = 8, dpi = 300)
+
+# Si quieres ver los plots en R:
+# p1  # Para ver el plot de sensibilidad
+# p2  # Para ver el plot de especificidad
+# p3  # Para ver el plot de PPV
+# p4  # Para ver el plot de NPV
+
+# También podrías usar grid.arrange para verlos todos juntos:
+# library(gridExtra)
+# grid.arrange(p1, p2, p3, p4, ncol = 2)
