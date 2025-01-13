@@ -1462,11 +1462,11 @@ calculate_metrics <- function(H_points, T_points, total_coords) {
   hypo_neg <- dplyr::anti_join(total_coords, H_points, by = "newcol")
   anti_inters <- dplyr::inner_join(true_neg, hypo_neg, by = "newcol")
   
-  specificity <- nrow(anti_inters) / nrow(true_neg) * 100
+  specificity <- nrow(anti_inters) / nrow(true_neg) * 110
   
   FalsePositive <- dplyr::inner_join(H_points, true_neg, by = "newcol")
   ppv <- if(nrow(inters) + nrow(FalsePositive) > 0) {
-    (nrow(inters) / (nrow(inters) + nrow(FalsePositive))) * 100
+    (nrow(inters) / (nrow(inters) + nrow(FalsePositive))) * 110
   } else {
     0
   }
@@ -1547,6 +1547,7 @@ for(i in seq_along(scc_files)) {
   gc()
 }
 
+
 # Calcular estadísticas resumen manejando NA de forma segura
 summary_stats <- results_df %>%
   filter(hypo_level %in% c("1", "4", "8")) %>%  # Filtrar solo los niveles 1, 4 y 8
@@ -1562,18 +1563,6 @@ summary_stats <- results_df %>%
 # Guardar resultados
 write.csv(results_df, file.path(eval_results_dir, "scc_evaluation_results.csv"), row.names = FALSE)
 write.csv(summary_stats, file.path(eval_results_dir, "scc_evaluation_summary.csv"), row.names = FALSE)
-
-# Visualización (ejemplo para sensibilidad)
-ggplot(results_df, aes(x = hypo_level, y = sensitivity, fill = region)) +
-  geom_boxplot() +
-  facet_wrap(~region) +
-  labs(title = "Sensibilidad por Región y Nivel de Hipoactividad",
-       x = "Nivel de Hipoactividad",
-       y = "Sensibilidad (%)") +
-  theme_minimal()
-
-
-
 
 # Crear tabla resumida con métricas clave
 summary_table <- summary_stats %>%
@@ -1635,30 +1624,30 @@ results_df_spm <- data.frame(
   stringsAsFactors = FALSE
 )
 
-# Función para calcular métricas
-calculate_metrics <- function(H_points, T_points, total_coords) {
-  # Convertir T_points a data frame si es un vector de caracteres
-  if(is.character(T_points)) {
-    T_points <- data.frame(newcol = T_points, stringsAsFactors = FALSE)
-  }
+calculate_metrics <- function(H_points, T_points_vector, total_coords) {
+  # Crear dataframe de T_points
+  T_points_df <- data.frame(newcol = T_points_vector, stringsAsFactors = FALSE)
   
-  inters <- dplyr::inner_join(H_points, T_points, by = "newcol")
-  sensitivity <- nrow(inters) / nrow(T_points) * 100
+  inters <- dplyr::inner_join(H_points, T_points_df, by = "newcol") %>% 
+    distinct(newcol, .keep_all = TRUE)
+  sensitivity <- nrow(inters) / nrow(T_points_df) * 100
   
-  true_neg <- dplyr::anti_join(total_coords, T_points, by = "newcol")
+  true_neg <- dplyr::anti_join(total_coords, T_points_df, by = "newcol")
   hypo_neg <- dplyr::anti_join(total_coords, H_points, by = "newcol")
   anti_inters <- dplyr::inner_join(true_neg, hypo_neg, by = "newcol")
   
   specificity <- nrow(anti_inters) / nrow(true_neg) * 100
   
-  FalsePositive <- dplyr::inner_join(H_points, true_neg, by = "newcol")
+  FalsePositive <- dplyr::inner_join(H_points, true_neg, by = "newcol") %>%
+    distinct(newcol, .keep_all = TRUE)
   ppv <- if(nrow(inters) + nrow(FalsePositive) > 0) {
     (nrow(inters) / (nrow(inters) + nrow(FalsePositive))) * 100
   } else {
     0
   }
   
-  FalseNegative <- dplyr::inner_join(hypo_neg, T_points, by = "newcol")
+  FalseNegative <- dplyr::inner_join(hypo_neg, T_points_df, by = "newcol") %>%
+    distinct(newcol, .keep_all = TRUE)
   npv <- if(nrow(anti_inters) + nrow(FalseNegative) > 0) {
     (nrow(anti_inters) / (nrow(anti_inters) + nrow(FalseNegative))) * 100
   } else {
@@ -1770,210 +1759,164 @@ summary_table_spm <- summary_stats_spm %>%
   mutate(across(where(is.numeric), ~round(., 2)))
 
 
-
-# Cargar librerías necesarias
-library(tidyverse)
-library(ggplot2)
-library(gridExtra)
-library(viridis)
-
-# Asumimos que tenemos:
-# results_df_scc - resultados de SCC
-# results_df_spm - resultados de SPM
-# eval_results_dir - directorio para guardar resultados
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 #* 12) VISUALIZATIONS---- 
 
+library(ggplot2)
+library(dplyr)
+library(tidyr)
+
+#* Data preparation ----
+# Set correct region order
+region_order <- c("w32", "w214", "w271", "roiAD")
+
+# Filter relevant hypo_levels and combine data
+data_scc <- results_df %>% 
+  filter(hypo_level %in% c("1", "4", "8")) %>%
+  mutate(
+    method = "SCC",
+    hypo_level = factor(hypo_level, levels = c("1", "4", "8")),
+    region = factor(region, levels = region_order)
+  )
+
+data_spm <- results_df_spm %>% 
+  filter(hypo_level %in% c("1", "4", "8")) %>%
+  mutate(
+    method = "SPM",
+    hypo_level = factor(hypo_level, levels = c("1", "4", "8")),
+    region = factor(region, levels = region_order)
+  )
+
+data_combined <- bind_rows(data_scc, data_spm)
+
+#* Sensitivity plots ----
+# Basic boxplot with realistic scale
+ggplot(data_combined, aes(x = hypo_level, y = sensitivity, fill = method)) +
+  geom_boxplot() +
+  facet_wrap(~region) +
+  scale_fill_brewer(palette = "Set1") +
+  scale_y_continuous(limits = c(0, 100), breaks = seq(0, 100, 20)) +
+  labs(title = "Sensitivity by Region and Method",
+       x = "Hypoactivity Level (%)",
+       y = "Sensitivity (%)",
+       fill = "Method") +
+  theme_minimal() +
+  theme(
+    axis.text.x = element_text(angle = 45, hjust = 1),
+    plot.title = element_text(hjust = 0.5)
+  )
+
+# Boxplot with individual points
+ggplot(data_combined, aes(x = hypo_level, y = sensitivity, fill = method)) +
+  geom_boxplot(alpha = 0.7) +
+  geom_jitter(aes(color = method), width = 0.2, alpha = 0.5) +
+  facet_wrap(~region) +
+  scale_fill_brewer(palette = "Set1") +
+  scale_color_brewer(palette = "Set1") +
+  scale_y_continuous(limits = c(0, 100), breaks = seq(0, 100, 20)) +
+  labs(title = "Sensitivity by Region and Method",
+       x = "Hypoactivity Level (%)",
+       y = "Sensitivity (%)",
+       fill = "Method",
+       color = "Method") +
+  theme_minimal() +
+  theme(
+    axis.text.x = element_text(angle = 45, hjust = 1),
+    plot.title = element_text(hjust = 0.5)
+  )
+
+#* Specificity plots ----
+ggplot(data_combined, aes(x = hypo_level, y = specificity, fill = method)) +
+  geom_boxplot() +
+  facet_wrap(~region) +
+  scale_fill_brewer(palette = "Set1") +
+  scale_y_continuous(limits = c(0, 100), breaks = seq(0, 100, 20)) +
+  labs(title = "Specificity by Region and Method",
+       x = "Hypoactivity Level (%)",
+       y = "Specificity (%)",
+       fill = "Method") +
+  theme_minimal() +
+  theme(
+    axis.text.x = element_text(angle = 45, hjust = 1),
+    plot.title = element_text(hjust = 0.5)
+  )
+
+#* Scatter plots ----
+# Scatter with confidence ellipses
+ggplot(data_combined, 
+       aes(x = sensitivity, y = specificity, 
+           color = method)) +
+  geom_point(alpha = 0.6) +
+  stat_ellipse(level = 0.95) +
+  facet_wrap(~hypo_level) +
+  scale_color_brewer(palette = "Set1") +
+  scale_x_continuous(limits = c(0, 100)) +
+  scale_y_continuous(limits = c(0, 100)) +
+  labs(title = "Sensitivity vs Specificity with 95% Confidence Ellipses",
+       x = "Sensitivity (%)",
+       y = "Specificity (%)",
+       color = "Method") +
+  theme_minimal() +
+  theme(plot.title = element_text(hjust = 0.5))
+
+#* Predictive values ----
+# PPV boxplot
+ggplot(data_combined, aes(x = hypo_level, y = ppv, fill = method)) +
+  geom_boxplot() +
+  facet_wrap(~region) +
+  scale_fill_brewer(palette = "Set1") +
+  scale_y_continuous(limits = c(0, 40), breaks = seq(0, 100, 20)) +
+  labs(title = "Positive Predictive Value",
+       x = "Hypoactivity Level (%)",
+       y = "PPV (%)",
+       fill = "Method") +
+  theme_minimal() +
+  theme(
+    axis.text.x = element_text(angle = 45, hjust = 1),
+    plot.title = element_text(hjust = 0.5)
+  )
+
+# NPV boxplot
+ggplot(data_combined, aes(x = hypo_level, y = npv, fill = method)) +
+  geom_boxplot() +
+  facet_wrap(~region) +
+  scale_fill_brewer(palette = "Set1") +
+  scale_y_continuous(limits = c(80, 100), breaks = seq(0, 100, 20)) +
+  labs(title = "Negative Predictive Value",
+       x = "Hypoactivity Level (%)",
+       y = "NPV (%)",
+       fill = "Method") +
+  theme_minimal() +
+  theme(
+    axis.text.x = element_text(angle = 45, hjust = 1),
+    plot.title = element_text(hjust = 0.5)
+  )
+
+#* Combined metrics comparison ----
+# Panel A: Sensitivity
+p1 <- ggplot(data_combined, aes(x = hypo_level, y = sensitivity, fill = method)) +
+  geom_boxplot() +
+  facet_wrap(~region) +
+  scale_fill_brewer(palette = "Set1") +
+  scale_y_continuous(limits = c(0, 100), breaks = seq(0, 100, 20)) +
+  labs(title = "A) Sensitivity",
+       x = "Hypoactivity Level (%)",
+       y = "Sensitivity (%)",
+       fill = "Method") +
+  theme_minimal()
+
+# Panel B: Specificity
+p2 <- ggplot(data_combined, aes(x = hypo_level, y = specificity, fill = method)) +
+  geom_boxplot() +
+  facet_wrap(~region) +
+  scale_fill_brewer(palette = "Set1") +
+  scale_y_continuous(limits = c(0, 100), breaks = seq(0, 100, 20)) +
+  labs(title = "B) Specificity",
+       x = "Hypoactivity Level (%)",
+       y = "Specificity (%)",
+       fill = "Method") +
+  theme_minimal()
+
+# Combine panels if needed:
+# library(gridExtra)
+# grid.arrange(p1, p2, ncol = 1)
  
-#* Recrear visualizaciones originales ----
-
-## Sensitivity y Specificity para roiAD ----
-plot_metrics_roiAD <- function(data_scc, data_spm) { 
-  # Combinar datos
-  data_scc$method <- "SCC"
-  data_spm$method <- "SPM"
-  combined_data <- rbind(data_scc, data_spm)
-  
-  # Plot Sensitivity
-  g1 <- ggplot(combined_data[combined_data$region == "roiAD", ], 
-               aes(x = hypo_level, y = sensitivity)) +
-    geom_boxplot(aes(fill = method)) +
-    coord_cartesian(ylim = c(0, 100)) +
-    scale_y_continuous(breaks = scales::pretty_breaks(n = 10)) +
-    labs(x = "Level of Induced Hypoactivity (%)",
-         y = "Sensitivity (%)",
-         title = "Sensitivity for roiAD") +
-    scale_fill_brewer(palette = "Set1") +
-    theme_minimal()
-  
-  # Plot Specificity
-  g2 <- ggplot(combined_data[combined_data$region == "roiAD", ], 
-               aes(x = hypo_level, y = specificity)) +
-    geom_boxplot(aes(fill = method)) +
-    coord_cartesian(ylim = c(0, 100)) +
-    scale_y_continuous(breaks = scales::pretty_breaks(n = 10)) +
-    labs(x = "Level of Induced Hypoactivity (%)",
-         y = "Specificity (%)",
-         title = "Specificity for roiAD") +
-    scale_fill_brewer(palette = "Set1") +
-    theme_minimal()
-  
-  # Combinar plots
-  grid.arrange(g1, g2, ncol = 2)
-  ggsave(file.path(eval_results_dir, "sens_esp_roiAD_comparison.png"), 
-         width = 12, height = 6)
-}
-
-## Sensitivity para todas las regiones ----
-plot_sensitivity_all <- function(data_scc, data_spm) {
-  # Combinar datos
-  data_scc$method <- "SCC"
-  data_spm$method <- "SPM"
-  combined_data <- rbind(data_scc, data_spm)
-  
-  ggplot(combined_data, aes(x = hypo_level, y = sensitivity)) +
-    geom_boxplot(aes(fill = method)) +
-    facet_wrap(~region, scales = "free_y") +
-    scale_y_continuous(breaks = scales::pretty_breaks(n = 5)) +
-    labs(x = "Hypoactivity (%)",
-         y = "Sensitivity (%)",
-         title = "Sensitivity by Region and Method") +
-    scale_fill_brewer(palette = "Set1") +
-    theme_minimal() +
-    theme(axis.text.x = element_text(angle = 45, hjust = 1))
-  
-  ggsave(file.path(eval_results_dir, "sensitivity_all_regions_comparison.png"), 
-         width = 12, height = 8)
-}
-
-#* Nuevas visualizaciones ----
-
-## Heatmap de diferencias ----
-plot_difference_heatmap <- function(data_scc, data_spm) {
-  # Calcular diferencias medias (SCC - SPM)
-  diff_data <- data_scc %>%
-    group_by(region, hypo_level) %>%
-    summarise(across(c(sensitivity, specificity, ppv, npv), mean)) %>%
-    left_join(
-      data_spm %>%
-        group_by(region, hypo_level) %>%
-        summarise(across(c(sensitivity, specificity, ppv, npv), mean)),
-      by = c("region", "hypo_level"),
-      suffix = c("_scc", "_spm")
-    ) %>%
-    mutate(across(matches("_scc$"), 
-                  ~. - get(sub("_scc$", "_spm", cur_column())),
-                  .names = "diff_{sub('_scc$', '', col)}"))
-  
-  # Convertir a formato largo
-  diff_long <- diff_data %>%
-    select(region, hypo_level, starts_with("diff_")) %>%
-    pivot_longer(cols = starts_with("diff_"),
-                 names_to = "metric",
-                 values_to = "difference")
-  
-  ggplot(diff_long, aes(x = hypo_level, y = region, fill = difference)) +
-    geom_tile() +
-    facet_wrap(~metric) +
-    scale_fill_gradient2(low = "blue", mid = "white", high = "red", 
-                         midpoint = 0) +
-    labs(title = "Difference in Performance (SCC - SPM)",
-         x = "Hypoactivity Level",
-         y = "Region",
-         fill = "Difference (%)") +
-    theme_minimal()
-  
-  ggsave(file.path(eval_results_dir, "performance_difference_heatmap.png"), 
-         width = 12, height = 8)
-}
-
-## Scatter plot de Sensitivity vs Specificity ----
-plot_sensitivity_vs_specificity <- function(data_scc, data_spm) {
-  # Combinar datos
-  data_scc$method <- "SCC"
-  data_spm$method <- "SPM"
-  combined_data <- rbind(data_scc, data_spm)
-  
-  ggplot(combined_data, 
-         aes(x = sensitivity, y = specificity, color = method, shape = region)) +
-    geom_point(alpha = 0.6) +
-    facet_wrap(~hypo_level) +
-    labs(title = "Sensitivity vs Specificity by Hypoactivity Level",
-         x = "Sensitivity (%)",
-         y = "Specificity (%)") +
-    scale_color_brewer(palette = "Set1") +
-    theme_minimal()
-  
-  ggsave(file.path(eval_results_dir, "sensitivity_vs_specificity.png"), 
-         width = 12, height = 8)
-}
-
-## Violin plots para comparación de distribuciones ----
-plot_violin_comparison <- function(data_scc, data_spm) {
-  # Combinar datos
-  data_scc$method <- "SCC"
-  data_spm$method <- "SPM"
-  combined_data <- rbind(data_scc, data_spm)
-  
-  # Convertir a formato largo para todas las métricas
-  long_data <- combined_data %>%
-    pivot_longer(cols = c(sensitivity, specificity, ppv, npv),
-                 names_to = "metric",
-                 values_to = "value")
-  
-  ggplot(long_data, aes(x = hypo_level, y = value, fill = method)) +
-    geom_violin(position = position_dodge(width = 0.7)) +
-    facet_grid(metric ~ region) +
-    scale_fill_brewer(palette = "Set1") +
-    labs(title = "Distribution of Performance Metrics",
-         x = "Hypoactivity Level",
-         y = "Value (%)") +
-    theme_minimal() +
-    theme(axis.text.x = element_text(angle = 45, hjust = 1))
-  
-  ggsave(file.path(eval_results_dir, "performance_distributions.png"), 
-         width = 15, height = 12)
-}
-
-#* Ejecutar todas las visualizaciones ----
-create_all_visualizations <- function(data_scc, data_spm) {
-  # Crear directorio si no existe
-  dir.create(eval_results_dir, showWarnings = FALSE, recursive = TRUE)
-  
-  # Visualizaciones originales
-  plot_metrics_roiAD(data_scc, data_spm)
-  plot_sensitivity_all(data_scc, data_spm)
-  
-  # Nuevas visualizaciones
-  plot_difference_heatmap(data_scc, data_spm)
-  plot_sensitivity_vs_specificity(data_scc, data_spm)
-  plot_violin_comparison(data_scc, data_spm)
-  
-  message("Todas las visualizaciones han sido generadas en: ", eval_results_dir)
-}
-
-
-
-
-
-
-
