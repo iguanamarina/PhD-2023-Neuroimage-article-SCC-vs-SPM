@@ -29,8 +29,8 @@
 ####
 
 #* Working directory ----
-# setwd("~/Escritorio/[2022] SCCvsSPM 1vsGroup/PhD-2023-Neuroimage-article-SCC-vs-SPM")
-setwd("~/Escritorio/[2022] SCCvsSPM 1vsGroup/PhD-2023-Neuroimage-article-SCC-vs-SPM")
+# setwd("~/GitHub/PhD-2023-Neuroimage-article-SCC-vs-SPM")
+setwd("~/GitHub/PhD-2023-Neuroimage-article-SCC-vs-SPM")
 
 #* Options ----
 options(scipen = 6, digits = 4) # View outputs in non-scientific notation
@@ -51,6 +51,7 @@ for(packgs in packgs) {
 }
 
 remotes::install_github("skgrange/threadr")
+install.packages("contoureR")
 
 # Then load them:
 lapply(packgs, library, character.only = TRUE); library(threadr)
@@ -71,6 +72,7 @@ library(BPST); library(Triangulation); library(ImageSCC)
 #* Install package neuroSCC ----
 remotes::install_github("iguanamarina/neuroSCC")
 library(neuroSCC)
+
 
 #* Other parameters ----
 
@@ -136,7 +138,7 @@ VT = Triangulation::TriMesh(contourCoordinates[[1]], n = 8)
 
 #* Save these contour coordinates ----
 # Define the directory path
-directoryPath <- paste0("~/Escritorio/[2022] SCCvsSPM 1vsGroup/PhD-2023-Neuroimage-article-SCC-vs-SPM/Results/z", 
+directoryPath <- paste0("~/GitHub/PhD-2023-Neuroimage-article-SCC-vs-SPM/Results/z", 
                         as.character(param.z))
 
 # Check if the directory exists and create it if it does not
@@ -163,7 +165,7 @@ save(VT, file = paste0("contour", as.character(param.z), ".RData"))
 #* Create CN DataBase ----
 
 # Set the working directory for image files
-setwd("~/Escritorio/[2022] SCCvsSPM 1vsGroup/PhD-2023-Neuroimage-article-SCC-vs-SPM/PETimg_masked for simulations")
+setwd("~/GitHub/PhD-2023-Neuroimage-article-SCC-vs-SPM/PETimg_masked for simulations")
 
 # Create the database using a specific file pattern 
 pattern <- "^masked_swwwC\\d+_tripleNormEsp_w00_rrec_OSEM3D_32_it1.nii"
@@ -179,11 +181,11 @@ database_CN <- neuroSCC::databaseCreator(pattern)
 # SCC_CN <- neuroSCC::matrixCreator(database_CN, pattern, param.z, xy)
 
 # Now it should be in matrix format with every row representing a Control file 
-# setwd(paste0("~/Escritorio/[2022] SCCvsSPM 1vsGroup/PhD-2023-Neuroimage-article-SCC-vs-SPM/Results/z", as.character(param.z)))
+# setwd(paste0("~/GitHub/PhD-2023-Neuroimage-article-SCC-vs-SPM/Results/z", as.character(param.z)))
 # save(SCC_CN, file = "SCC_CN.RData") # SCC matrix for Controls
 
 # Load results to save time:
-load("~/Escritorio/[2022] SCCvsSPM 1vsGroup/PhD-2023-Neuroimage-article-SCC-vs-SPM/Results/z35/SCC_CN.RData")
+load("~/GitHub/PhD-2023-Neuroimage-article-SCC-vs-SPM/Results/z35/SCC_CN.RData")
 
 
 ####
@@ -191,7 +193,7 @@ load("~/Escritorio/[2022] SCCvsSPM 1vsGroup/PhD-2023-Neuroimage-article-SCC-vs-S
 ####
 
 # Set initial working directory
-base_dir <- "~/Escritorio/[2022] SCCvsSPM 1vsGroup/PhD-2023-Neuroimage-article-SCC-vs-SPM/PETimg_masked for simulations"
+base_dir <- "~/GitHub/PhD-2023-Neuroimage-article-SCC-vs-SPM/PETimg_masked for simulations"
 setwd(base_dir)
 
 # Get the list of files matching the general pattern and extract maximum value
@@ -273,7 +275,7 @@ for (i in 1:length(region)) {
 ####
 
 # Based on the results from section "2 - Get coordinates in pckg Triangulation format"
-setwd(paste0("~/Escritorio/[2022] SCCvsSPM 1vsGroup/PhD-2023-Neuroimage-article-SCC-vs-SPM/Results/z", as.character(param.z)))
+setwd(paste0("~/GitHub/PhD-2023-Neuroimage-article-SCC-vs-SPM/Results/z", as.character(param.z)))
 
 # Load previously calculated contour as VT 
 load(paste0("contour", as.character(param.z), ".RData"))
@@ -296,7 +298,7 @@ Tr.band = as.matrix(Brain.Tr)
 ####
 
 # Set initial working directory
-base_dir <- "~/Escritorio/[2022] SCCvsSPM 1vsGroup/PhD-2023-Neuroimage-article-SCC-vs-SPM"
+base_dir <- "~/GitHub/PhD-2023-Neuroimage-article-SCC-vs-SPM"
 param_z_dir <- paste0(base_dir, "/Results/z", as.character(param.z))
 result_dir <- paste0(param_z_dir, "/results")
 
@@ -360,7 +362,7 @@ for (i in 1:length(region)) {
 #* Theoretical ROIs ----
 
 # Define the base directory (can be skipped if you ran the whole script)
-base_dir <- "~/Escritorio/[2022] SCCvsSPM 1vsGroup/PhD-2023-Neuroimage-article-SCC-vs-SPM"
+base_dir <- "~/GitHub/PhD-2023-Neuroimage-article-SCC-vs-SPM"
 
 # Define the regions to be processed (same as previous)
 regions <- c("w32", "w79", "w214", "w271", "w413", "wroiAD")
@@ -375,7 +377,7 @@ neuroSCC::processROIs(base_dir, regions, numbers)
 library(tidyverse)
 
 # Define the table ROI directory 
-roi_dir <- "~/Escritorio/[2022] SCCvsSPM 1vsGroup/PhD-2023-Neuroimage-article-SCC-vs-SPM/roisNormalizadas/tables"
+roi_dir <- "~/GitHub/PhD-2023-Neuroimage-article-SCC-vs-SPM/roisNormalizadas/tables"
 
 # Load all the ROI tables
 ROI_data <- lapply(seq_along(regions), function(i) {
@@ -403,7 +405,7 @@ T_points <- unlist(T_points, recursive = FALSE)
 # Remove unwanted part from the names of the list elements
 names(T_points) <- sub("\\.newcol$", "", names(T_points))
 
-# setwd("~/Escritorio/[2022] SCCvsSPM 1vsGroup/PhD-2023-Neuroimage-article-SCC-vs-SPM/roisNormalizadas/tables")
+# setwd("~/GitHub/PhD-2023-Neuroimage-article-SCC-vs-SPM/roisNormalizadas/tables")
 # saveRDS(T_points, file = "T_points.RDS")
 
 # Clean up
@@ -445,7 +447,7 @@ SCC_vs_SPM <- data.frame(
 )
 
 # Load the template and automatically detect the limits of x and y
-setwd("~/Escritorio/[2022] SCCvsSPM 1vsGroup/PhD-2023-Neuroimage-article-SCC-vs-SPM")
+setwd("~/GitHub/PhD-2023-Neuroimage-article-SCC-vs-SPM")
 template <- neuroSCC::neuroCleaner("Auxiliary Files/new_mask")
 
 # Keep the relevant slice
@@ -473,7 +475,7 @@ for (k in 1:length(roi)) {
   H_points <- list()
   
   # Set working directory to results folder
-  setwd(paste0("~/Escritorio/[2022] SCCvsSPM 1vsGroup/PhD-2023-Neuroimage-article-SCC-vs-SPM/Results/z", 
+  setwd(paste0("~/GitHub/PhD-2023-Neuroimage-article-SCC-vs-SPM/Results/z", 
                as.character(param.z), "/results"))
   
   # Load SCC results for each region
@@ -552,13 +554,13 @@ for (k in 1:length(roi)) {
                       npv = sd(SCC_sens_esp$npv, na.rm = TRUE))
     SCC_sens_esp <- rbind(SCC_sens_esp, means, sds)
     
-    setwd(paste0("~/Escritorio/[2022] SCCvsSPM 1vsGroup/PhD-2023-Neuroimage-article-SCC-vs-SPM/Results/z", 
+    setwd(paste0("~/GitHub/PhD-2023-Neuroimage-article-SCC-vs-SPM/Results/z", 
                  as.character(param.z), "/results", "/ROI", roi[k]))
     readr::write_csv(SCC_sens_esp, paste0("sens_esp_SCC_", regions[i], "_", roi[k], ".csv"), 
                      na = "NA", append = FALSE)
   }
   
-  setwd(paste0("~/Escritorio/[2022] SCCvsSPM 1vsGroup/PhD-2023-Neuroimage-article-SCC-vs-SPM/Results/z", 
+  setwd(paste0("~/GitHub/PhD-2023-Neuroimage-article-SCC-vs-SPM/Results/z", 
                as.character(param.z), "/results", "/ROI", roi[k]))
   
   sens_esp_SCC_w32 <- readr::read_csv(paste0("sens_esp_SCC_w32_", roi[k], ".csv"), 
@@ -576,7 +578,7 @@ for (k in 1:length(roi)) {
   
   # Sensitivity and Specificity for SPM
   for (i in 1:length(regions)) {
-    setwd(paste0("~/Escritorio/[2022] SCCvsSPM 1vsGroup/PhD-2023-Neuroimage-article-SCC-vs-SPM/Results/z", 
+    setwd(paste0("~/GitHub/PhD-2023-Neuroimage-article-SCC-vs-SPM/Results/z", 
                  as.numeric(param.z), "/SPM", "/ROI", i, "_", regions[i], "_0", roi[k]))
     binary <- neuroSCC::neuroCleaner("binary.nii")
     H_points_SPM <- binary[binary$z == as.numeric(param.z) & binary$pet == 1, 2:3]
@@ -639,14 +641,14 @@ for (k in 1:length(roi)) {
                       npv = sd(SPM_sens_esp$npv, na.rm = TRUE))
     SPM_sens_esp <- rbind(SPM_sens_esp, means, sds)
     
-    setwd(paste0("~/Escritorio/[2022] SCCvsSPM 1vsGroup/PhD-2023-Neuroimage-article-SCC-vs-SPM/Results/z", 
+    setwd(paste0("~/GitHub/PhD-2023-Neuroimage-article-SCC-vs-SPM/Results/z", 
                  as.character(param.z), "/results", "/ROI", roi[k]))
     
     readr::write_csv(SPM_sens_esp, paste0("sens_esp_SPM_", regions[i], "_", roi[k], ".csv"), 
                      na = "NA", append = FALSE)
   }
   
-  setwd(paste0("~/Escritorio/[2022] SCCvsSPM 1vsGroup/PhD-2023-Neuroimage-article-SCC-vs-SPM/Results/z", 
+  setwd(paste0("~/GitHub/PhD-2023-Neuroimage-article-SCC-vs-SPM/Results/z", 
                as.character(param.z), "/results", "/ROI", roi[k]))
   
   sens_esp_SPM_w32 <- readr::read_csv(paste0("sens_esp_SPM_w32_", roi[k], ".csv"), 
@@ -720,17 +722,17 @@ for (k in 1:length(roi)) {
 # View(SCC_vs_SPM)
 # View(SCC_vs_SPM_complete)
 
-# setwd(paste0("~/Escritorio/[2022] SCCvsSPM 1vsGroup/PhD-2023-Neuroimage-article-SCC-vs-SPM/Results/z", as.numeric(param.z), "/results"))
+# setwd(paste0("~/GitHub/PhD-2023-Neuroimage-article-SCC-vs-SPM/Results/z", as.numeric(param.z), "/results"))
 # saveRDS(SCC_vs_SPM, file = "SCC_vs_SPM.RDS")
 # saveRDS(SCC_vs_SPM_complete, file = "SCC_vs_SPM_complete.RDS")
 
 #* Export as LaTeX table code ----
 
-setwd("~/Escritorio/[2022] SCCvsSPM 1vsGroup/PhD-2023-Neuroimage-article-SCC-vs-SPM/Article")
+setwd("~/GitHub/PhD-2023-Neuroimage-article-SCC-vs-SPM/Article")
 
 library(dplyr)
 
-SCC_vs_SPM <- readRDS(paste0("~/Escritorio/[2022] SCCvsSPM 1vsGroup/PhD-2023-Neuroimage-article-SCC-vs-SPM/Results/z", 
+SCC_vs_SPM <- readRDS(paste0("~/GitHub/PhD-2023-Neuroimage-article-SCC-vs-SPM/Results/z", 
                              as.numeric(param.z), "/results/SCC_vs_SPM.RDS"))
 
 SCC_vs_SPM <- SCC_vs_SPM %>% dplyr::arrange(method)
@@ -763,9 +765,9 @@ print(xtable(latex, type = "latex"),
 ####  
 
 # Load data if not already in environment
-referencia <- readRDS(paste0("~/Escritorio/[2022] SCCvsSPM 1vsGroup/PhD-2023-Neuroimage-article-SCC-vs-SPM/Results/z", 
+referencia <- readRDS(paste0("~/GitHub/PhD-2023-Neuroimage-article-SCC-vs-SPM/Results/z", 
                              as.numeric(param.z), "/results/SCC_vs_SPM.RDS"))
-table <- readRDS(paste0("~/Escritorio/[2022] SCCvsSPM 1vsGroup/PhD-2023-Neuroimage-article-SCC-vs-SPM/Results/z", 
+table <- readRDS(paste0("~/GitHub/PhD-2023-Neuroimage-article-SCC-vs-SPM/Results/z", 
                         as.numeric(param.z), "/results/SCC_vs_SPM_complete.RDS"))
 
 # Load necessary packages
@@ -785,7 +787,7 @@ table$Roi <- as.character(as.numeric(table$Roi) * 10)
 table2 <- rbind(table[table$method == "SCC", ], table[table$method == "SPM", ])
 
 # Set working directory for saving figures
-setwd(paste0("~/Escritorio/[2022] SCCvsSPM 1vsGroup/PhD-2023-Neuroimage-article-SCC-vs-SPM/Results/z", 
+setwd(paste0("~/GitHub/PhD-2023-Neuroimage-article-SCC-vs-SPM/Results/z", 
              as.numeric(param.z), "/Figures")) 
 
 #* Sensitivity and Specificity for wroiAD ----
@@ -1008,14 +1010,14 @@ ggsave(filename = paste0("ppv_npv_ALL_", as.numeric(param.z), ".png"),
 # Of the things we need, we already have
 
 # The True Points
-T_points <- readRDS("~/Escritorio/[2022] SCCvsSPM 1vsGroup/PhD-2023-Neuroimage-article-SCC-vs-SPM/roisNormalizadas/tables/T_points.RDS")
+T_points <- readRDS("~/GitHub/PhD-2023-Neuroimage-article-SCC-vs-SPM/roisNormalizadas/tables/T_points.RDS")
 
 # The SCC_ (matrix of controls)
-load("~/Escritorio/[2022] SCCvsSPM 1vsGroup/PhD-2023-Neuroimage-article-SCC-vs-SPM/Results/z35/SCC_CN.RData")
+load("~/GitHub/PhD-2023-Neuroimage-article-SCC-vs-SPM/Results/z35/SCC_CN.RData")
 
 # And the triangulations, run the chunk if not loaded
 
-load("~/Escritorio/[2022] SCCvsSPM 1vsGroup/PhD-2023-Neuroimage-article-SCC-vs-SPM/Results/z35/contour35.RData")
+load("~/GitHub/PhD-2023-Neuroimage-article-SCC-vs-SPM/Results/z35/contour35.RData")
 
 Brain.V <- VT[[1]]
 Brain.Tr <- VT[[2]]
@@ -1028,7 +1030,7 @@ Tr.band = as.matrix(Brain.Tr)
 # So we only need the SCC of just one patient
 
 # Set initial working directory
-base_dir <- "~/Escritorio/[2022] SCCvsSPM 1vsGroup/PhD-2023-Neuroimage-article-SCC-vs-SPM/PETimg_masked for simulations"
+base_dir <- "~/GitHub/PhD-2023-Neuroimage-article-SCC-vs-SPM/PETimg_masked for simulations"
 setwd(base_dir)
 
 #* Clone Factory ----  
@@ -1061,7 +1063,7 @@ numClonesValues <- c(2, 5, 10)
 factorLambdaValues <- c(0.001, 0.01, 0.1)
 
 # Change the working directory to export the results
-setwd("~/Escritorio/[2022] SCCvsSPM 1vsGroup/PhD-2023-Neuroimage-article-SCC-vs-SPM/Results/z35/1vsGroup")
+setwd("~/GitHub/PhD-2023-Neuroimage-article-SCC-vs-SPM/Results/z35/1vsGroup")
 
 #* Parameters for SCC computation ----
 d.est <- 5  # degree of spline for mean function
@@ -1120,50 +1122,50 @@ for (numClones in numClonesValues) {
     })
   }
 }
-
-#* Preliminary Visualizations ----
-library(fields)
-
-# load("~/Escritorio/[2022] SCCvsSPM 1vsGroup/PhD-2023-Neuroimage-article-SCC-vs-SPM/Results/z35/1vsGroup/SCC_1vsG_35.RData")
-
-plot(SCC_1vsG,
-  # breaks=c(0,2),
-  # col="turquoise",
-  breaks = seq(from = 0, to = 2, length.out = 65),
-  xlab = "Longitudinal (1-95)",
-  ylab = "Transversal (1-79)",
-  sub = "Difference between estimated mean functions: CNs - ADs",
-  col.sub = "red",
-  family = "serif"
-)
-
-# SECOND WAY: JUST ONE COLOR AND THEN WE OVERLAY A SERIES OF POINTS
-# RUN THIS NEXT PLOT CODE, STOP IN ONE OF THE ESTIMATED MEAN FUNCTIONS, THEN RUN "POINTS" TO OVERLAY THEM
-
-plot(SCC_1vsG,
-  breaks = c(0, 2),
-  col = "turquoise",
-  # breaks=seq(from=0,to=2,length.out = 65),
-  xlab = "Longitudinal (1-95)",
-  ylab = "Transversal (1-79)",
-  sub = "Difference between estimated mean functions: CNs - ADs",
-  col.sub = "red",
-  family = "serif"
-)
-
-points_1 <- getPoints(SCC_1vsG) # Returns coordinates of points above or below estimated mean function (points.P,points.N; in that order)
-
-points(points_1[[1]],
-  type = "p",
-  pch = 15,
-  col = "navy"
-)
-
-points(points_1[[2]],
-  type = "p",
-  pch = 15,
-  col = "yellow"
-)
+# 
+# #* Preliminary Visualizations ----
+# library(fields)
+# 
+# # load("~/GitHub/PhD-2023-Neuroimage-article-SCC-vs-SPM/Results/z35/1vsGroup/SCC_1vsG_35.RData")
+# 
+# plot(SCC_1vsG,
+#   # breaks=c(0,2),
+#   # col="turquoise",
+#   breaks = seq(from = 0, to = 2, length.out = 65),
+#   xlab = "Longitudinal (1-95)",
+#   ylab = "Transversal (1-79)",
+#   sub = "Difference between estimated mean functions: CNs - ADs",
+#   col.sub = "red",
+#   family = "serif"
+# )
+# 
+# # SECOND WAY: JUST ONE COLOR AND THEN WE OVERLAY A SERIES OF POINTS
+# # RUN THIS NEXT PLOT CODE, STOP IN ONE OF THE ESTIMATED MEAN FUNCTIONS, THEN RUN "POINTS" TO OVERLAY THEM
+# 
+# plot(SCC_1vsG,
+#   breaks = c(0, 2),
+#   col = "turquoise",
+#   # breaks=seq(from=0,to=2,length.out = 65),
+#   xlab = "Longitudinal (1-95)",
+#   ylab = "Transversal (1-79)",
+#   sub = "Difference between estimated mean functions: CNs - ADs",
+#   col.sub = "red",
+#   family = "serif"
+# )
+# 
+# points_1 <- getPoints(SCC_1vsG) # Returns coordinates of points above or below estimated mean function (points.P,points.N; in that order)
+# 
+# points(points_1[[1]],
+#   type = "p",
+#   pch = 15,
+#   col = "navy"
+# )
+# 
+# points(points_1[[2]],
+#   type = "p",
+#   pch = 15,
+#   col = "yellow"
+# )
 
 
 #* Parameter Evaluation ----
@@ -1176,10 +1178,10 @@ points(points_1[[2]],
 # Theoretical ROIs
 
 # The True Points
-T_points <- readRDS("~/Escritorio/[2022] SCCvsSPM 1vsGroup/PhD-2023-Neuroimage-article-SCC-vs-SPM/roisNormalizadas/tables/T_points.RDS")
+T_points <- readRDS("~/GitHub/PhD-2023-Neuroimage-article-SCC-vs-SPM/roisNormalizadas/tables/T_points.RDS")
 
 # Load the template and automatically detect the limits of x and y
-setwd("~/Escritorio/[2022] SCCvsSPM 1vsGroup/PhD-2023-Neuroimage-article-SCC-vs-SPM")
+setwd("~/GitHub/PhD-2023-Neuroimage-article-SCC-vs-SPM")
 template <- neuroSCC::neuroCleaner("Auxiliary Files/new_mask")
 
 # Keep the relevant slice
@@ -1204,7 +1206,7 @@ numClonesValues <- c(2, 5, 10)
 factorLambdaValues <- c(0.001, 0.01, 0.1)
 
 # Set working directory
-base_dir <- "~/Escritorio/[2022] SCCvsSPM 1vsGroup/PhD-2023-Neuroimage-article-SCC-vs-SPM"
+base_dir <- "~/GitHub/PhD-2023-Neuroimage-article-SCC-vs-SPM"
 setwd(paste0(base_dir, "/Results/z", as.character(param.z), "/1vsGroup"))
 
 # Initialize results dataframe
@@ -1298,7 +1300,7 @@ SPM_results <- data.frame(method = "SPM", sens = sensitivity_SPM, esp = specific
 # Assuming that SCC_CN and triangulation objects are loaded from previous sections.
 
 # Set initial working directory
-base_dir <- "~/Escritorio/[2022] SCCvsSPM 1vsGroup/PhD-2023-Neuroimage-article-SCC-vs-SPM/PETimg_masked for simulations"
+base_dir <- "~/GitHub/PhD-2023-Neuroimage-article-SCC-vs-SPM/PETimg_masked for simulations"
 setwd(base_dir)
 
 # Get list of files
@@ -1315,7 +1317,7 @@ lambda <- 10^{seq(-6, 3, 0.5)}
 alpha.grid <- c(0.10, 0.05, 0.01)
 
 # Set output directory
-output_dir <- "~/Escritorio/[2022] SCCvsSPM 1vsGroup/PhD-2023-Neuroimage-article-SCC-vs-SPM/Results/z35/1vsGroup/SCC"
+output_dir <- "~/GitHub/PhD-2023-Neuroimage-article-SCC-vs-SPM/Results/z35/1vsGroup/SCC"
 dir.create(output_dir, showWarnings = FALSE, recursive = TRUE)
 
 # Main loop
@@ -1412,10 +1414,12 @@ for (i in 1:length(ad_files)) {
 # varianzas iguales, no incluimos covariables ni máscaras, ni grand scaling. Se hace un T-test con 
 # un [-1,1] porque el grupo AD es el G1 y el CN el G2 y lo que se busca es hipometabolismo en el G1 (AD).
 
+# There is a MATLAB script ready for this in Results\z35\1vsGroup\SPM\script.m
 
-# 10) 1 VS GROUP (evaluación) ----
 
-# * SCC ----
+# 11) 1 VS GROUP (evaluación) ----
+
+# * SCC evaluation----
 
 # Cargar librerías necesarias
 library(tidyverse)
@@ -1427,7 +1431,7 @@ if(!exists("T_points") || !exists("total_coords")) {
 }
 
 # Configurar directorios
-base_dir <- "~/Escritorio/[2022] SCCvsSPM 1vsGroup/PhD-2023-Neuroimage-article-SCC-vs-SPM"
+base_dir <- "~/GitHub/PhD-2023-Neuroimage-article-SCC-vs-SPM"
 scc_results_dir <- file.path(base_dir, "Results/z35/1vsGroup/SCC")
 eval_results_dir <- file.path(base_dir, "Results/z35/1vsGroup/Evaluation")
 dir.create(eval_results_dir, showWarnings = FALSE, recursive = TRUE)
@@ -1601,12 +1605,371 @@ ggplot(heatmap_data, aes(x = hypo_level, y = region, fill = value)) +
 ggsave("summary_metrics_heatmap.png", width = 12, height = 8)
  
 
+# * SPM Evaluation ----
+
+# Cargar librerías necesarias
+library(tidyverse)
+library(neuroSCC)
+library(ggplot2)
+
+# Verificar objetos necesarios
+if(!exists("T_points") || !exists("total_coords")) {
+  stop("Los objetos T_points o total_coords no están cargados. Por favor, cárgalos antes de continuar.")
+}
+
+# Configurar directorios
+base_dir <- "~/GitHub/PhD-2023-Neuroimage-article-SCC-vs-SPM"
+spm_dir <- file.path(base_dir, "Results/z35/1vsGroup/SPM")
+eval_results_dir <- file.path(base_dir, "Results/z35/1vsGroup/Evaluation")
+dir.create(eval_results_dir, showWarnings = FALSE, recursive = TRUE)
+
+# Inicializar dataframe para resultados
+results_df_spm <- data.frame(
+  control_num = character(),
+  region = character(),
+  hypo_level = character(),
+  sensitivity = numeric(),
+  specificity = numeric(),
+  ppv = numeric(),
+  npv = numeric(),
+  stringsAsFactors = FALSE
+)
+
+# Función para calcular métricas
+calculate_metrics <- function(H_points, T_points, total_coords) {
+  # Convertir T_points a data frame si es un vector de caracteres
+  if(is.character(T_points)) {
+    T_points <- data.frame(newcol = T_points, stringsAsFactors = FALSE)
+  }
+  
+  inters <- dplyr::inner_join(H_points, T_points, by = "newcol")
+  sensitivity <- nrow(inters) / nrow(T_points) * 100
+  
+  true_neg <- dplyr::anti_join(total_coords, T_points, by = "newcol")
+  hypo_neg <- dplyr::anti_join(total_coords, H_points, by = "newcol")
+  anti_inters <- dplyr::inner_join(true_neg, hypo_neg, by = "newcol")
+  
+  specificity <- nrow(anti_inters) / nrow(true_neg) * 100
+  
+  FalsePositive <- dplyr::inner_join(H_points, true_neg, by = "newcol")
+  ppv <- if(nrow(inters) + nrow(FalsePositive) > 0) {
+    (nrow(inters) / (nrow(inters) + nrow(FalsePositive))) * 100
+  } else {
+    0
+  }
+  
+  FalseNegative <- dplyr::inner_join(hypo_neg, T_points, by = "newcol")
+  npv <- if(nrow(anti_inters) + nrow(FalseNegative) > 0) {
+    (nrow(anti_inters) / (nrow(anti_inters) + nrow(FalseNegative))) * 100
+  } else {
+    0
+  }
+  
+  return(c(sensitivity, specificity, ppv, npv))
+}
+
+# Obtener lista de archivos binary.nii
+spm_files <- list.files(spm_dir, pattern = "^binary.*\\.nii$", full.names = TRUE)
+
+# Verificar que hay archivos para procesar
+if(length(spm_files) == 0) {
+  stop("No se encontraron archivos binary.nii en el directorio SPM")
+}
+
+# Barra de progreso
+total_files <- length(spm_files)
+print_progress_bar <- function(i, total) {
+  percent <- floor(i / total * 100)
+  cat(sprintf("\r[%-50s] %d%%", 
+              paste(rep("=", floor(percent / 2)), collapse = ""),
+              percent))
+  if(i == total) cat("\n")
+}
+
+# Bucle principal de evaluación
+for(i in seq_along(spm_files)) {
+  # Imprimir progreso
+  print_progress_bar(i, total_files)
+  
+  # Extraer información del nombre del archivo
+  file_info <- str_match(basename(spm_files[i]), "binary_swwwC(\\d+)_(\\w+)_(\\d)\\.nii")
+  
+  # O alternativamente, usando el enfoque más robusto:
+  file_name <- basename(spm_files[i])
+  parts <- unlist(strsplit(file_name, "_"))
+  control_num <- gsub("^.*C", "", parts[2])  # Extraer número después de la C
+  region <- parts[3]
+  hypo_level <- gsub("\\.nii$", "", parts[4])
+  
+  # Cargar binary.nii
+  tryCatch({
+    binary_data <- neuroSCC::neuroCleaner(spm_files[i])
+    
+    # Extraer puntos significativos
+    H_points <- binary_data[binary_data$pet == 1, c("y", "x")]
+    H_points <- unite(as.data.frame(H_points), newcol, c(y, x), remove = TRUE)
+    
+    # Obtener puntos verdaderos
+    T_points_key <- if(region == "roiAD") {
+      paste0("w", region, "_C", control_num)
+    } else {
+      paste0(region, "_C", control_num)
+    }
+    
+    if(is.null(T_points[[T_points_key]])) {
+      warning(sprintf("No se encontraron T_points para: %s", T_points_key))
+      next
+    }
+    
+    # Calcular métricas
+    metrics <- calculate_metrics(H_points, T_points[[T_points_key]], total_coords)
+    
+    # Almacenar resultados
+    results_df_spm <- rbind(results_df_spm, data.frame(
+      control_num = control_num,
+      region = region,
+      hypo_level = hypo_level,
+      sensitivity = metrics[1],
+      specificity = metrics[2],
+      ppv = metrics[3],
+      npv = metrics[4]
+    ))
+    
+  }, error = function(e) {
+    warning(sprintf("Error procesando %s: %s", basename(spm_files[i]), e$message))
+  })
+}
+
+# Calcular estadísticas resumen
+summary_stats_spm <- results_df_spm %>%
+  filter(hypo_level %in% c("1", "4", "8")) %>%
+  group_by(region, hypo_level) %>%
+  summarise(across(c(sensitivity, specificity, ppv, npv),
+                   list(mean = ~if(all(is.na(.))) NA_real_ else mean(., na.rm = TRUE),
+                        sd = ~if(all(is.na(.))) NA_real_ else sd(., na.rm = TRUE),
+                        n = ~sum(!is.na(.)),
+                        n_na = ~sum(is.na(.))),
+                   .names = "{.col}_{.fn}")) %>%
+  ungroup()
+
+# Guardar resultados
+write.csv(results_df_spm, 
+          file.path(eval_results_dir, "spm_evaluation_results.csv"), 
+          row.names = FALSE)
+write.csv(summary_stats_spm, 
+          file.path(eval_results_dir, "spm_evaluation_summary.csv"), 
+          row.names = FALSE)
+
+# Crear tabla resumida con métricas clave
+summary_table_spm <- summary_stats_spm %>%
+  dplyr::select(region, hypo_level,
+                sensitivity_mean, sensitivity_sd,
+                specificity_mean, specificity_sd,
+                ppv_mean, ppv_sd,
+                npv_mean, npv_sd) %>%
+  mutate(across(where(is.numeric), ~round(., 2)))
+
+
+
+# Cargar librerías necesarias
+library(tidyverse)
+library(ggplot2)
+library(gridExtra)
+library(viridis)
+
+# Asumimos que tenemos:
+# results_df_scc - resultados de SCC
+# results_df_spm - resultados de SPM
+# eval_results_dir - directorio para guardar resultados
 
 
 
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+#* 12) VISUALIZATIONS---- 
+
+ 
+#* Recrear visualizaciones originales ----
+
+## Sensitivity y Specificity para roiAD ----
+plot_metrics_roiAD <- function(data_scc, data_spm) { 
+  # Combinar datos
+  data_scc$method <- "SCC"
+  data_spm$method <- "SPM"
+  combined_data <- rbind(data_scc, data_spm)
+  
+  # Plot Sensitivity
+  g1 <- ggplot(combined_data[combined_data$region == "roiAD", ], 
+               aes(x = hypo_level, y = sensitivity)) +
+    geom_boxplot(aes(fill = method)) +
+    coord_cartesian(ylim = c(0, 100)) +
+    scale_y_continuous(breaks = scales::pretty_breaks(n = 10)) +
+    labs(x = "Level of Induced Hypoactivity (%)",
+         y = "Sensitivity (%)",
+         title = "Sensitivity for roiAD") +
+    scale_fill_brewer(palette = "Set1") +
+    theme_minimal()
+  
+  # Plot Specificity
+  g2 <- ggplot(combined_data[combined_data$region == "roiAD", ], 
+               aes(x = hypo_level, y = specificity)) +
+    geom_boxplot(aes(fill = method)) +
+    coord_cartesian(ylim = c(0, 100)) +
+    scale_y_continuous(breaks = scales::pretty_breaks(n = 10)) +
+    labs(x = "Level of Induced Hypoactivity (%)",
+         y = "Specificity (%)",
+         title = "Specificity for roiAD") +
+    scale_fill_brewer(palette = "Set1") +
+    theme_minimal()
+  
+  # Combinar plots
+  grid.arrange(g1, g2, ncol = 2)
+  ggsave(file.path(eval_results_dir, "sens_esp_roiAD_comparison.png"), 
+         width = 12, height = 6)
+}
+
+## Sensitivity para todas las regiones ----
+plot_sensitivity_all <- function(data_scc, data_spm) {
+  # Combinar datos
+  data_scc$method <- "SCC"
+  data_spm$method <- "SPM"
+  combined_data <- rbind(data_scc, data_spm)
+  
+  ggplot(combined_data, aes(x = hypo_level, y = sensitivity)) +
+    geom_boxplot(aes(fill = method)) +
+    facet_wrap(~region, scales = "free_y") +
+    scale_y_continuous(breaks = scales::pretty_breaks(n = 5)) +
+    labs(x = "Hypoactivity (%)",
+         y = "Sensitivity (%)",
+         title = "Sensitivity by Region and Method") +
+    scale_fill_brewer(palette = "Set1") +
+    theme_minimal() +
+    theme(axis.text.x = element_text(angle = 45, hjust = 1))
+  
+  ggsave(file.path(eval_results_dir, "sensitivity_all_regions_comparison.png"), 
+         width = 12, height = 8)
+}
+
+#* Nuevas visualizaciones ----
+
+## Heatmap de diferencias ----
+plot_difference_heatmap <- function(data_scc, data_spm) {
+  # Calcular diferencias medias (SCC - SPM)
+  diff_data <- data_scc %>%
+    group_by(region, hypo_level) %>%
+    summarise(across(c(sensitivity, specificity, ppv, npv), mean)) %>%
+    left_join(
+      data_spm %>%
+        group_by(region, hypo_level) %>%
+        summarise(across(c(sensitivity, specificity, ppv, npv), mean)),
+      by = c("region", "hypo_level"),
+      suffix = c("_scc", "_spm")
+    ) %>%
+    mutate(across(matches("_scc$"), 
+                  ~. - get(sub("_scc$", "_spm", cur_column())),
+                  .names = "diff_{sub('_scc$', '', col)}"))
+  
+  # Convertir a formato largo
+  diff_long <- diff_data %>%
+    select(region, hypo_level, starts_with("diff_")) %>%
+    pivot_longer(cols = starts_with("diff_"),
+                 names_to = "metric",
+                 values_to = "difference")
+  
+  ggplot(diff_long, aes(x = hypo_level, y = region, fill = difference)) +
+    geom_tile() +
+    facet_wrap(~metric) +
+    scale_fill_gradient2(low = "blue", mid = "white", high = "red", 
+                         midpoint = 0) +
+    labs(title = "Difference in Performance (SCC - SPM)",
+         x = "Hypoactivity Level",
+         y = "Region",
+         fill = "Difference (%)") +
+    theme_minimal()
+  
+  ggsave(file.path(eval_results_dir, "performance_difference_heatmap.png"), 
+         width = 12, height = 8)
+}
+
+## Scatter plot de Sensitivity vs Specificity ----
+plot_sensitivity_vs_specificity <- function(data_scc, data_spm) {
+  # Combinar datos
+  data_scc$method <- "SCC"
+  data_spm$method <- "SPM"
+  combined_data <- rbind(data_scc, data_spm)
+  
+  ggplot(combined_data, 
+         aes(x = sensitivity, y = specificity, color = method, shape = region)) +
+    geom_point(alpha = 0.6) +
+    facet_wrap(~hypo_level) +
+    labs(title = "Sensitivity vs Specificity by Hypoactivity Level",
+         x = "Sensitivity (%)",
+         y = "Specificity (%)") +
+    scale_color_brewer(palette = "Set1") +
+    theme_minimal()
+  
+  ggsave(file.path(eval_results_dir, "sensitivity_vs_specificity.png"), 
+         width = 12, height = 8)
+}
+
+## Violin plots para comparación de distribuciones ----
+plot_violin_comparison <- function(data_scc, data_spm) {
+  # Combinar datos
+  data_scc$method <- "SCC"
+  data_spm$method <- "SPM"
+  combined_data <- rbind(data_scc, data_spm)
+  
+  # Convertir a formato largo para todas las métricas
+  long_data <- combined_data %>%
+    pivot_longer(cols = c(sensitivity, specificity, ppv, npv),
+                 names_to = "metric",
+                 values_to = "value")
+  
+  ggplot(long_data, aes(x = hypo_level, y = value, fill = method)) +
+    geom_violin(position = position_dodge(width = 0.7)) +
+    facet_grid(metric ~ region) +
+    scale_fill_brewer(palette = "Set1") +
+    labs(title = "Distribution of Performance Metrics",
+         x = "Hypoactivity Level",
+         y = "Value (%)") +
+    theme_minimal() +
+    theme(axis.text.x = element_text(angle = 45, hjust = 1))
+  
+  ggsave(file.path(eval_results_dir, "performance_distributions.png"), 
+         width = 15, height = 12)
+}
+
+#* Ejecutar todas las visualizaciones ----
+create_all_visualizations <- function(data_scc, data_spm) {
+  # Crear directorio si no existe
+  dir.create(eval_results_dir, showWarnings = FALSE, recursive = TRUE)
+  
+  # Visualizaciones originales
+  plot_metrics_roiAD(data_scc, data_spm)
+  plot_sensitivity_all(data_scc, data_spm)
+  
+  # Nuevas visualizaciones
+  plot_difference_heatmap(data_scc, data_spm)
+  plot_sensitivity_vs_specificity(data_scc, data_spm)
+  plot_violin_comparison(data_scc, data_spm)
+  
+  message("Todas las visualizaciones han sido generadas en: ", eval_results_dir)
+}
 
 
 
