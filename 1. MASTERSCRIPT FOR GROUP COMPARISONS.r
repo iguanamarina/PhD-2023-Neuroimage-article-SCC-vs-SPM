@@ -1840,6 +1840,26 @@ ggplot(data_combined, aes(x = hypo_level, y = specificity, fill = method)) +
     plot.title = element_text(hjust = 0.5)
   )
 
+# Boxplot with individual points 
+
+ggplot(data_combined, aes(x = hypo_level, y = specificity, fill = method)) +
+  geom_boxplot(alpha = 0.7) +
+  geom_jitter(aes(color = method), width = 0.2, alpha = 0.5) +
+  facet_wrap(~region) +
+  scale_fill_brewer(palette = "Set1") +
+  scale_color_brewer(palette = "Set1") +
+  scale_y_continuous(limits = c(0, 100), breaks = seq(0, 100, 20)) +
+  labs(title = "Specificity by Region and Method",
+       x = "Hypoactivity Level (%)",
+       y = "Specificity (%)",
+       fill = "Method",
+       color = "Method") +
+  theme_minimal() +
+  theme(
+    axis.text.x = element_text(angle = 45, hjust = 1),
+    plot.title = element_text(hjust = 0.5)
+  )
+
 #* Scatter plots ----
 # Scatter with confidence ellipses
 ggplot(data_combined, 
@@ -1885,6 +1905,44 @@ ggplot(data_combined, aes(x = hypo_level, y = npv, fill = method)) +
        x = "Hypoactivity Level (%)",
        y = "NPV (%)",
        fill = "Method") +
+  theme_minimal() +
+  theme(
+    axis.text.x = element_text(angle = 45, hjust = 1),
+    plot.title = element_text(hjust = 0.5)
+  )
+
+# PPV boxplot
+ggplot(data_combined, aes(x = hypo_level, y = ppv, fill = method)) +
+  geom_boxplot(alpha = 0.7) +
+  geom_jitter(aes(color = method), width = 0.2, alpha = 0.5) +
+  facet_wrap(~region) +
+  scale_fill_brewer(palette = "Set1") +
+  scale_color_brewer(palette = "Set1") +
+  scale_y_continuous(limits = c(0, 40), breaks = seq(0, 100, 20)) +
+  labs(title = "Positive Predictive Value",
+       x = "Hypoactivity Level (%)",
+       y = "PPV (%)",
+       fill = "Method",
+       color = "Method") +
+  theme_minimal() +
+  theme(
+    axis.text.x = element_text(angle = 45, hjust = 1),
+    plot.title = element_text(hjust = 0.5)
+  )
+
+# NPV boxplot
+ggplot(data_combined, aes(x = hypo_level, y = npv, fill = method)) +
+  geom_boxplot(alpha = 0.7) +
+  geom_jitter(aes(color = method), width = 0.2, alpha = 0.5) +
+  facet_wrap(~region) +
+  scale_fill_brewer(palette = "Set1") +
+  scale_color_brewer(palette = "Set1") +
+  scale_y_continuous(limits = c(80, 100), breaks = seq(0, 100, 20)) +
+  labs(title = "Negative Predictive Value",
+       x = "Hypoactivity Level (%)",
+       y = "NPV (%)",
+       fill = "Method",
+       color = "Method") +
   theme_minimal() +
   theme(
     axis.text.x = element_text(angle = 45, hjust = 1),
