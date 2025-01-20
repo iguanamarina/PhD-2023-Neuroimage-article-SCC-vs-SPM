@@ -1,0 +1,279 @@
+\documentclass[12pt,a4paper]{article}
+
+% Paquetes necesarios
+\usepackage[spanish]{babel}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{amsmath}
+\usepackage{amsfonts}
+\usepackage{amssymb}
+\usepackage{amsthm}
+\usepackage{mathtools}
+\usepackage{booktabs}
+\usepackage{geometry}
+\usepackage{enumitem}
+\usepackage{bm}
+\usepackage{cases}
+
+% Configuración de márgenes
+\geometry{margin=2.5cm}
+
+% Nuevos comandos útiles
+\newcommand{\R}{\mathbb{R}}
+\newcommand{\norm}[1]{\left\|#1\right\|}
+
+\title{Análisis de Conceptos en Neuroimagen}
+\author{Juan Arias}
+\date{\today}
+
+\begin{document}
+
+\maketitle
+
+\section{Datos Funcionales en Superficies}
+
+\subsection{Explicación Conceptual}
+El análisis de datos funcionales (FDA) es un enfoque que considera las imágenes cerebrales como superficies continuas en lugar de puntos independientes. Es como pasar de ver el cerebro como un conjunto de píxeles individuales a verlo como una superficie suave y continua, similar a cómo realmente funciona el cerebro.
+
+Imagina una fotografía digital: aunque está compuesta por píxeles individuales, lo que representa es una imagen continua. De manera similar, aunque medimos la actividad cerebral en puntos discretos, sabemos que la actividad cerebral real es continua y que puntos cercanos están relacionados entre sí.
+
+\subsection{Desarrollo Matemático}
+El modelo matemático completo se expresa como:
+\begin{equation}
+Y_i(z) = \mu(z) + \eta_i(z) + \sigma(z)\varepsilon_i(z), \quad z \in \Omega
+\end{equation}
+
+Donde:
+\begin{itemize}
+\item $Y_i(z)$ son las observaciones para el sujeto $i$ en la ubicación $z$
+\item $\mu(z)$ es la función media con las siguientes propiedades:
+  \begin{itemize}
+  \item $\mu \in C^2(\Omega)$ (dos veces diferenciable continua)
+  \item $\|\mu\|_\infty < \infty$ (acotada)
+  \end{itemize}
+\item $\eta_i(z)$ es un proceso estocástico con:
+  \begin{itemize}
+  \item $E[\eta_i(z)] = 0$
+  \item $\text{Cov}[\eta_i(z), \eta_i(z')] = G_\eta(z,z')$
+  \item Descomposición Karhunen-Loève: $\eta_i(z) = \sum_{k=1}^{\infty} \xi_{ik}\phi_k(z)$
+  \end{itemize}
+\end{itemize}
+
+\section{Triangulaciones de Delaunay}
+
+\subsection{Explicación Conceptual}
+Las triangulaciones de Delaunay son una forma especial de dividir una superficie irregular en triángulos. Es como si quisieras cubrir una forma irregular (como el contorno de un cerebro) con triángulos, pero necesitas hacerlo de la manera más ``limpia'' posible, evitando triángulos muy puntiagudos o deformes.
+
+\subsection{Desarrollo Matemático}
+Una triangulación $\Delta$ se define formalmente como:
+
+\begin{enumerate}
+\item Colección de triángulos: $\Delta = \{T_1,...,T_M\}$
+
+\item Propiedades:
+  \begin{itemize}
+  \item Cobertura completa: $\Omega = \bigcup_{m=1}^M T_m$
+  \item Intersección válida: Para $T_i, T_j \in \Delta$:
+    \begin{equation}
+    T_i \cap T_j = \begin{cases} 
+    \emptyset & \text{sin intersección} \\
+    \{\text{vértice}\} & \text{punto común} \\
+    \{\text{arista}\} & \text{lado común}
+    \end{cases}
+    \end{equation}
+  \end{itemize}
+
+\item Criterio de Delaunay:\\
+  Para cualquier triángulo T con circuncentro c y radio r:
+  \begin{equation}
+  \|p - c\| > r \quad \forall p \in V(\Delta)\setminus V(T)
+  \end{equation}
+  donde V($\cdot$) denota el conjunto de vértices.
+\end{enumerate}
+
+\section{Splines Bivariados}
+
+\subsection{Explicación Conceptual}
+Los splines bivariados son como un sistema de ``parches'' suaves que se unen perfectamente entre sí. Cada triángulo de la triangulación contiene un ``parche'' que es una función polinómica, y estos parches se unen de manera tan suave que no se notan las uniones.
+
+\subsection{Desarrollo Matemático}
+El espacio de splines de grado d y suavidad r se define como:
+
+\begin{equation}
+S^r_d(\Delta) = \{s \in C^r(\Omega): s|_T \in \mathcal{P}_d, \forall T \in \Delta\}
+\end{equation}
+
+Base de Bernstein-Bézier:
+\begin{enumerate}
+\item Para un triángulo T:
+  \begin{equation}
+  B^T_{ijk}(z) = \frac{d!}{i!j!k!}b_1^i b_2^j b_3^k
+  \end{equation}
+  donde $(b_1,b_2,b_3)$ son coordenadas baricéntricas
+
+\item Representación spline:
+  \begin{equation}
+  s(z) = \sum_{|\alpha|=d} c_\alpha B^T_\alpha(z)
+  \end{equation}
+  donde $\alpha = (i,j,k)$ con $i+j+k=d$
+\end{enumerate}
+
+\section{T-test y Corrección de Bonferroni}
+
+\subsection{Explicación Conceptual}
+El t-test es una herramienta básica para comparar si dos grupos son diferentes. Sin embargo, cuando haces muchas comparaciones a la vez (como comparar miles de píxeles en una imagen cerebral), aumenta la probabilidad de encontrar diferencias por puro azar.
+
+La corrección de Bonferroni es como un ``factor de seguridad'': si quieres mantener un riesgo global del 5\% de error cuando haces 100 comparaciones, cada comparación individual debe hacerse con un nivel de riesgo del 0.05\%.
+
+\subsection{Desarrollo Matemático}
+\begin{enumerate}
+\item T-test para cada ubicación z:
+  \begin{equation}
+  t(z) = \frac{\bar{Y}_1(z) - \bar{Y}_2(z)}{\sqrt{\frac{s_1^2(z)}{n_1} + \frac{s_2^2(z)}{n_2}}}
+  \end{equation}
+
+\item Probabilidad de error tipo I para m tests:
+  \begin{align}
+  P(\text{al menos un falso positivo}) &= 1 - P(\text{ningún falso positivo}) \\
+  &= 1 - (1-\alpha)^m \approx m\alpha
+  \end{align}
+
+\item Corrección de Bonferroni:
+  \begin{equation}
+  \alpha_{\text{corrected}} = \frac{\alpha}{m}
+  \end{equation}
+
+\item Control FWER (Family-Wise Error Rate):
+  \begin{equation}
+  P(\text{al menos un falso positivo}) \leq \alpha
+  \end{equation}
+\end{enumerate}
+
+\section{Simultaneous Confidence Corridors (SCC)}
+
+\subsection{Explicación Conceptual}
+Los SCC son como ``bandas de confianza'' alrededor de la función que estimas. En lugar de considerar cada punto por separado (como hace Bonferroni), consideran toda la función a la vez.
+
+La ventaja es que tienen en cuenta la estructura espacial de los datos: si dos puntos están cerca en el cerebro, probablemente tengan valores similares. Esto hace que los SCC sean más potentes que la corrección de Bonferroni.
+
+\subsection{Desarrollo Matemático}
+\begin{enumerate}
+\item Construcción del SCC:
+  \begin{equation}
+  \hat{\mu}(z) \pm q_{1-\alpha}\sqrt{\frac{\hat{G}_\eta(z,z)}{n}}
+  \end{equation}
+
+\item Proceso Gaussiano subyacente:
+  \begin{equation}
+  \zeta(z) = \frac{\sqrt{n}(\hat{\mu}(z) - \mu(z))}{\sqrt{\hat{G}_\eta(z,z)}}
+  \end{equation}
+  con propiedades:
+  \begin{itemize}
+  \item $E[\zeta(z)] = 0$
+  \item $\text{Var}[\zeta(z)] = 1$
+  \item $\text{Cov}[\zeta(z),\zeta(z')] = \frac{G_\eta(z,z')}{\sqrt{G_\eta(z,z)G_\eta(z',z')}}$
+  \end{itemize}
+
+\item Cobertura:
+  \begin{equation}
+  P\{\mu(z) \in [\hat{\mu}(z) \pm q_{1-\alpha}\sqrt{\hat{G}_\eta(z,z)/n}], \forall z \in \Omega\} = 1-\alpha
+  \end{equation}
+\end{enumerate}
+
+\section{Métricas de Evaluación en Neuroimagen}
+
+\subsection{Explicación Conceptual}
+
+Imagina que estamos evaluando un método para detectar regiones cerebrales afectadas por Alzheimer. Para cada región del cerebro, pueden ocurrir cuatro situaciones:
+
+\subsubsection{Sensibilidad (Recall)}
+\begin{itemize}
+\item \textbf{Qué es}: La capacidad del método para detectar correctamente las regiones realmente afectadas
+\item \textbf{Ejemplo práctico}: Si hay 100 regiones realmente afectadas por Alzheimer y nuestro método detecta 80 de ellas, la sensibilidad es del 80\%
+\item \textbf{Por qué importa}: Una baja sensibilidad significa que estamos ``perdiendo'' patología
+\item \textbf{Consecuencia de error}: No detectar una región afectada podría llevar a no tratar una condición que existe
+\end{itemize}
+
+\subsubsection{Especificidad}
+\begin{itemize}
+\item \textbf{Qué es}: La capacidad del método para identificar correctamente las regiones sanas
+\item \textbf{Ejemplo práctico}: Si hay 100 regiones sanas y nuestro método identifica correctamente 95 de ellas como sanas, la especificidad es del 95\%
+\item \textbf{Por qué importa}: Una baja especificidad significa que estamos generando ``falsas alarmas''
+\item \textbf{Consecuencia de error}: Identificar como enferma una región sana podría llevar a tratamientos innecesarios
+\end{itemize}
+
+\subsubsection{Valor Predictivo Positivo (PPV)}
+\begin{itemize}
+\item \textbf{Qué es}: La confiabilidad de una detección positiva
+\item \textbf{Ejemplo práctico}: Si el método marca 100 regiones como afectadas, y 90 de ellas realmente lo están, el PPV es del 90\%
+\item \textbf{Por qué importa}: Un bajo PPV significa que muchas de nuestras ``detecciones'' son falsas alarmas
+\item \textbf{Consecuencia de error}: Muchos falsos positivos pueden llevar a ansiedad innecesaria y sobretratamiento
+\end{itemize}
+
+\subsubsection{Valor Predictivo Negativo (NPV)}
+\begin{itemize}
+\item \textbf{Qué es}: La confiabilidad de un resultado negativo
+\item \textbf{Ejemplo práctico}: Si el método marca 100 regiones como sanas, y 95 de ellas realmente lo están, el NPV es del 95\%
+\item \textbf{Por qué importa}: Un alto NPV nos da confianza para descartar patología
+\item \textbf{Consecuencia de error}: Un bajo NPV significa que no podemos confiar cuando el método dice que algo está bien
+\end{itemize}
+
+\subsection{Desarrollo Matemático}
+Dada la matriz de confusión:
+
+\begin{table}[h]
+\centering
+\begin{tabular}{lcc}
+\toprule
+& Condición + & Condición - \\
+\midrule
+Test + & VP & FP \\
+Test - & FN & VN \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Las métricas se definen:
+
+\begin{enumerate}
+\item Sensibilidad (Recall):
+  \begin{equation}
+  Se = \frac{VP}{VP + FN}
+  \end{equation}
+
+\item Especificidad:
+  \begin{equation}
+  Sp = \frac{VN}{VN + FP}
+  \end{equation}
+
+\item Valor Predictivo Positivo:
+  \begin{equation}
+  PPV = \frac{VP}{VP + FP}
+  \end{equation}
+
+\item Valor Predictivo Negativo:
+  \begin{equation}
+  NPV = \frac{VN}{VN + FN}
+  \end{equation}
+\end{enumerate}
+
+Relaciones importantes:
+\begin{itemize}
+\item Precisión global:
+  \begin{equation}
+  Acc = \frac{VP + VN}{VP + FP + FN + VN}
+  \end{equation}
+
+\item F1-Score:
+  \begin{equation}
+  F1 = 2 \cdot \frac{PPV \cdot Se}{PPV + Se}
+  \end{equation}
+
+\item Relación con prevalencia (p):
+  \begin{align}
+  PPV &= \frac{Se \cdot p}{Se \cdot p + (1-Sp)(1-p)} \\
+  NPV &= \frac{Sp \cdot (1-p)}{(1-Se)p + Sp(1-p)}
+  \end{align}
+\end{itemize}
+
+\end{document}
